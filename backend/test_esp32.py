@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Your Convex deployment URL
-CONVEX_URL = os.getenv("CONVEX_URL", "https://your-deployment.convex.site")
+CONVEX_URL = os.getenv("CONVEX_URL", "https://your-deployment.convex.cloud")
 
 def send_sensor_data():
     """Simulate ESP32 sending sensor data"""
