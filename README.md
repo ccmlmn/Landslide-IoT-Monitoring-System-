@@ -28,7 +28,7 @@ ESP32 (Sensors) → Convex (HTTP Endpoint) → Database
 ### 1. Clone and Navigate
 
 ```bash
-cd "MiniProject Data Scientist/Landslide IoT System"
+cd Landslide IoT System
 ```
 
 ### 2. Set Up Convex
@@ -125,9 +125,10 @@ cd web-app
 npm run dev
 ```
 
-### 7. Test the System
+### 7. Test the System (If no hardware build yet)
 
 Open a 4th terminal and send test sensor data:
+This simulates the ESP32 sending sensor data to Convex at regular intervals.
 
 ```bash
 cd backend
@@ -137,7 +138,7 @@ python test_esp32.py
 Or manually with curl:
 
 ```bash
-curl -X POST https://your-deployment.convex.site/sensor-data \
+curl -X POST https://your-deployment.convex.cloud/sensor-data \
   -H "Content-Type: application/json" \
   -d '{"rain_value": 45.5, "soil_moisture": 67.2, "tilt_value": 12.3}'
 ```
@@ -147,17 +148,6 @@ curl -X POST https://your-deployment.convex.site/sensor-data \
 1. Open http://localhost:3000
 2. Sign in with Clerk
 3. See real-time sensor data and risk analysis
-
-## Testing Without Hardware
-
-Since you don't have the ESP32 hardware yet, use the test script:
-
-```bash
-cd backend
-python test_esp32.py
-```
-
-This simulates the ESP32 sending sensor data to Convex at regular intervals.
 
 ## Project Structure
 
@@ -240,19 +230,7 @@ landslide-iot-system/
 - Check Clerk dashboard for correct keys
 - Ensure middleware.ts is properly configured
 
-## Next Steps
-
-1. ✅ Test skeleton code with simulated data
-2. Build ESP32 hardware with sensors
-3. Flash ESP32 with firmware code
-4. Configure ESP32 with WiFi credentials
-5. Refine dashboard UI/UX with your team
-6. Add alerts and notifications
-7. Deploy to production
-
-## Contributing
-
-This is a skeleton codebase. Your team can:
+## Future Improvements
 
 - Enhance the UI design
 - Add more sophisticated risk algorithms
