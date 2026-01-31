@@ -1,167 +1,95 @@
-from flask import Flask, request, jsonify, render_template
-import sqlite3
-import datetime
-import math
-import numpy as np
+import os
+import time
+from dotenv import load_dotenv
+from convex_client import ConvexClient
+from anomaly_detector import AnomalyDetector
 
-app = Flask(__name__)
-DB_NAME = "slope_sentry.db"
+# Load environment variables
+load_dotenv()
 
-# --- Z-SCORE ANOMALY DETECTION LOGIC ---
-class AnomalyDetector:
-    def __init__(self, window_size=20):
-        self.window_size = window_size
-        # Store recent history for calculations
-        self.history = {
-            'rain': [],
-            'soil': [],
-            'tilt': []
-        }
+CONVEX_URL = os.getenv("CONVEX_URL")
+POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "5"))  # seconds
 
-    def update_and_score(self, rain, soil, tilt):
-        """
-        Calculates Z-score for each sensor and returns a combined risk %.
-        Uses a rolling window of the last N readings.
-        """
-        # Add new data
-        self.history['rain'].append(rain)
-        self.history['soil'].append(soil)
-        self.history['tilt'].append(tilt)
-
-        # Keep only last N records
-        for key in self.history:
-            if len(self.history[key]) > self.window_size:
-                self.history[key].pop(0)
-
-        # Need enough data to calculate std dev
-        if len(self.history['rain']) < 5:
-            return 0, "Initializing"
-
-        # Calculate Z-Scores
-        # Z = (Current - Mean) / StdDev
-        z_rain = self._calculate_z(rain, self.history['rain'])
-        z_soil = self._calculate_z(soil, self.history['soil'])
-        z_tilt = self._calculate_z(tilt, self.history['tilt'])
-
-        # --- RULE-BASED RISK CALCULATION ---
-        # 1. We take the absolute Z-score (deviation from normal)
-        # 2. We weight them (Rain & Tilt are critical)
-        # 3. Map to percentage. 
-        #    Assumption: Z=3 (3 sigma) is very high risk (100%)
-        
-        # Initial simple fusion: Average of absolute Z-scores
-        avg_z = (abs(z_rain) + abs(z_soil) + abs(z_tilt)) / 3.0
-        
-        # Map Z (0 to 3) to Risk (0 to 100%)
-        # If Z >= 3, risk is 100%. 
-        risk_percentage = (avg_z / 3.0) * 100.0
-        
-        # Boost risk if ANY individual sensor is critically high
-        if abs(z_tilt) > 3 or abs(z_soil) > 3:
-            risk_percentage = 100.0
+def main():
+    """Main processing loop"""
+    
+    if not CONVEX_URL:
+        print("Error: CONVEX_URL not set in environment variables")
+        return
+    
+    print(f"Starting Landslide IoT Processing Server")
+    print(f"Convex URL: {CONVEX_URL}")
+    print(f"Poll Interval: {POLL_INTERVAL}s")
+    print("-" * 50)
+    
+    # Initialize clients
+    convex = ConvexClient(CONVEX_URL)
+    detector = AnomalyDetector(window_size=20)
+    
+    processed_count = 0
+    
+    while True:
+        try:
+            # Fetch unprocessed data
+            unprocessed_data = convex.get_unprocessed_data()
             
-        risk_percentage = min(max(risk_percentage, 0), 100) # Clamp 0-100
+            if unprocessed_data:
+                print(f"\n[{time.strftime('%Y-%m-%d %H:%M:%S')}] Found {len(unprocessed_data)} unprocessed records")
+                
+                for data in unprocessed_data:
+                    try:
+                        # Extract sensor values
+                        rain = data.get("rainValue", 0.0)
+                        soil = data.get("soilMoisture", 0.0)
+                        tilt = data.get("tiltValue", 0.0)
+                        sensor_id = data.get("_id")
+                        timestamp = data.get("timestamp")
+                        
+                        # Calculate risk using Z-score
+                        risk_score, risk_state, z_scores = detector.update_and_score(rain, soil, tilt)
+                        
+                        print(f"  Processing {sensor_id[:8]}... -> Risk: {risk_state} ({risk_score}%)")
+                        
+                        # Prepare result data
+                        result_data = {
+                            "sensorDataId": sensor_id,
+                            "timestamp": timestamp,
+                            "rainValue": float(rain),
+                            "soilMoisture": float(soil),
+                            "tiltValue": float(tilt),
+                            "riskScore": float(risk_score),
+                            "riskState": risk_state,
+                            "zScoreRain": float(z_scores["rain"]),
+                            "zScoreSoil": float(z_scores["soil"]),
+                            "zScoreTilt": float(z_scores["tilt"]),
+                        }
+                        
+                        # Save result to Convex
+                        if convex.add_anomaly_result(result_data):
+                            # Mark as processed
+                            convex.mark_as_processed(sensor_id)
+                            processed_count += 1
+                            print(f"    ✓ Saved to database (Total processed: {processed_count})")
+                        else:
+                            print(f"    ✗ Failed to save result")
+                            
+                    except Exception as e:
+                        print(f"    ✗ Error processing record: {e}")
+                        continue
+            else:
+                # No data to process
+                print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] No unprocessed data. Waiting...", end="\r")
+            
+            # Wait before next poll
+            time.sleep(POLL_INTERVAL)
+            
+        except KeyboardInterrupt:
+            print("\n\nShutting down gracefully...")
+            print(f"Total records processed: {processed_count}")
+            break
+        except Exception as e:
+            print(f"\n✗ Error in main loop: {e}")
+            time.sleep(POLL_INTERVAL)
 
-        # Determine State
-        risk_state = "Low"
-        if risk_percentage > 60:
-            risk_state = "High"
-        elif risk_percentage > 30:
-            risk_state = "Moderate"
-
-        return round(risk_percentage, 2), risk_state
-
-    def _calculate_z(self, current, history):
-        mean = np.mean(history)
-        std = np.std(history)
-        if std == 0: return 0 # Avoid division by zero
-        return (current - mean) / std
-
-detector = AnomalyDetector()
-
-# --- DATABASE SETUP ---
-def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS sensor_data (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT,
-            rain_value REAL,
-            soil_moisture REAL,
-            tilt_value REAL,
-            risk_score REAL,
-            risk_state TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
-
-init_db()
-
-# --- ROUTES ---
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/api/sensor-data', methods=['POST'])
-def receive_data():
-    try:
-        data = request.json
-        rain = float(data.get('rain_value', 0))
-        soil = float(data.get('soil_moisture', 0))
-        tilt = float(data.get('tilt_value', 0))
-
-        # Calculate Risk
-        risk_score, risk_state = detector.update_and_score(rain, soil, tilt)
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # Save to DB
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute('''
-            INSERT INTO sensor_data (timestamp, rain_value, soil_moisture, tilt_value, risk_score, risk_state)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (timestamp, rain, soil, tilt, risk_score, risk_state))
-        conn.commit()
-        conn.close()
-
-        print(f"Recorded: Rain={rain}, Soil={soil}, Tilt={tilt} -> Risk={risk_state} ({risk_score}%)")
-        
-        return jsonify({"status": "success", "risk_state": risk_state}), 201
-
-    except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 400
-
-@app.route('/api/history', methods=['GET'])
-def get_history():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row # Access columns by name
-    c = conn.cursor()
-    # Get last 50 records
-    c.execute('SELECT * FROM sensor_data ORDER BY id DESC LIMIT 50')
-    rows = c.fetchall()
-    conn.close()
-    
-    data = [dict(row) for row in rows]
-    return jsonify(data) # Returns data latest first
-
-@app.route('/api/latest', methods=['GET'])
-def get_latest():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    c.execute('SELECT * FROM sensor_data ORDER BY id DESC LIMIT 1')
-    row = c.fetchone()
-    conn.close()
-    
-    if row:
-        return jsonify(dict(row))
-    else:
-        return jsonify({})
-
-if __name__ == '__main__':
-    # Run on all interfaces so ESP32 can connect
-    app.run(host='0.0.0.0', port=5000, debug=True)
+if __name__ == "__main__":
+    main()
