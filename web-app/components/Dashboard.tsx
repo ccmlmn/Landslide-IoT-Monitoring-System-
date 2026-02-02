@@ -5,19 +5,71 @@ import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, Droplets, Mountain, Activity } from "lucide-react";
 
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      {/* Risk Status Card Skeleton */}
+      <Card className="border-2">
+        <CardHeader>
+          <div className="h-7 bg-gray-200 rounded w-64"></div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-12 bg-gray-200 rounded w-32 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-48"></div>
+        </CardContent>
+      </Card>
+
+      {/* Sensor Values Grid Skeleton */}
+      <div className="grid gap-4 md:grid-cols-3">
+        {[1, 2, 3].map((i) => (
+          <Card key={i}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="h-5 bg-gray-200 rounded w-24"></div>
+              <div className="h-4 w-4 bg-gray-200 rounded"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-8 bg-gray-200 rounded w-20 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-32"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Recent History Skeleton */}
+      <Card>
+        <CardHeader>
+          <div className="h-6 bg-gray-200 rounded w-40"></div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+              >
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-48"></div>
+                  <div className="h-3 bg-gray-200 rounded w-64"></div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-6 bg-gray-200 rounded-full w-20"></div>
+                  <div className="h-6 bg-gray-200 rounded w-12"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export function Dashboard() {
   const latestResult = useQuery(api.sensorData.getLatestResult);
   const history = useQuery(api.sensorData.getLatestResults, { limit: 10 });
 
   if (!latestResult) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <Activity className="h-12 w-12 animate-pulse mx-auto mb-4" />
-          <p className="text-lg text-gray-600">Waiting for sensor data...</p>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   const getRiskColor = (riskState: string) => {
