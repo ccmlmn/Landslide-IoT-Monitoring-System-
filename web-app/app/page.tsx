@@ -3,7 +3,7 @@
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { SignIn } from "@clerk/nextjs";
 import { Dashboard } from "@/components/Dashboard";
-import { AlertTriangle, Radio, Bell, Zap } from "lucide-react";
+import { AlertTriangle, Radio, Bell, Zap, Mountain } from "lucide-react";
 
 export default function Home() {
     return (
@@ -91,29 +91,52 @@ export default function Home() {
                     </div>
 
                     {/* Right Section - Sign In */}
-                    <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-8 bg-white">
-                        <div className="w-full max-w-md">
+                    <div className="w-full lg:w-1/2 flex items-center justify-center p-4 bg-gradient-to-br from-green-50 via-emerald-50 to-white relative overflow-hidden">
+                        {/* Subtle Background Pattern */}
+                        <div className="absolute inset-0 opacity-5">
+                            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <pattern id="topographic" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
+                                        <path d="M20 20c0-10 10-20 20-20s20 10 20 20-10 20-20 20-20-10-20-20z" 
+                                              fill="none" stroke="currentColor" strokeWidth="1" className="text-green-600"/>
+                                        <path d="M30 30c0-15 15-30 30-30s30 15 30 30-15 30-30 30-30-15-30-30z" 
+                                              fill="none" stroke="currentColor" strokeWidth="1" className="text-green-600"/>
+                                        <path d="M40 40c0-20 20-40 40-40s40 20 40 40-20 40-40 40-40-20-40-40z" 
+                                              fill="none" stroke="currentColor" strokeWidth="1" className="text-green-600"/>
+                                    </pattern>
+                                </defs>
+                                <rect width="100%" height="100%" fill="url(#topographic)"/>
+                            </svg>
+                        </div>
+
+                        <div className="w-full max-w-md relative z-10">
                             <SignIn 
+                                routing="hash"
                                 appearance={{
                                     elements: {
                                         rootBox: "w-full",
-                                        card: "shadow-lg border-0",
-                                        logoImage: "h-20 w-20",
+                                        card: "shadow-xl border border-green-100 bg-white/95 backdrop-blur-sm",
+                                        logoBox: "hidden",
+                                        logoImage: "hidden",
                                         headerTitle: "text-2xl font-bold text-gray-900",
                                         headerSubtitle: "text-gray-600",
-                                        formButtonPrimary: "bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold py-2.5",
-                                        formFieldInput: "border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500 focus:border-transparent",
-                                        footerActionLink: "text-green-600 hover:text-green-700 font-medium",
-                                        socialButtonsBlockButton: "border border-gray-300 rounded-lg hover:bg-gray-50 font-medium",
-                                        dividerLine: "bg-gray-200",
-                                        dividerText: "text-gray-600"
+                                        formButtonPrimary: "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg font-semibold py-2.5 shadow-md hover:shadow-lg transition-all",
+                                        formFieldInput: "border-2 border-gray-200 hover:border-green-300 focus:border-green-500 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-green-500/20 transition-all",
+                                        footerActionLink: "text-green-600 hover:text-green-700 font-semibold underline-offset-4",
+                                        socialButtonsBlockButton: "border-2 border-gray-200 hover:border-green-300 hover:bg-green-50 rounded-lg font-medium transition-all",
+                                        dividerLine: "bg-gradient-to-r from-transparent via-gray-300 to-transparent",
+                                        dividerText: "text-gray-600 bg-white px-2",
+                                        formFieldLabel: "text-gray-700 font-medium",
+                                        identityPreviewText: "font-medium",
+                                        formFieldInputShowPasswordButton: "text-green-600 hover:text-green-700"
                                     },
                                     variables: {
                                         colorPrimary: "#16a34a",
                                         colorBackground: "#ffffff",
-                                        colorInputBackground: "#f9fafb",
+                                        colorInputBackground: "#ffffff",
                                         colorInputText: "#111827",
-                                        fontFamily: "system-ui, -apple-system, sans-serif"
+                                        fontFamily: "system-ui, -apple-system, sans-serif",
+                                        borderRadius: "0.5rem"
                                     }
                                 }}
                             />
