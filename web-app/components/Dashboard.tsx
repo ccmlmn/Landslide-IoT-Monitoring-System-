@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, Droplets, Mountain, Activity } from "lucide-react";
+import { AlertTriangle, Droplets, Mountain, Activity, MapPin, Wifi, Calendar } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 function DashboardSkeleton() {
   return (
@@ -67,6 +69,7 @@ function DashboardSkeleton() {
 export function Dashboard() {
   const latestResult = useQuery(api.sensorData.getLatestResult);
   const history = useQuery(api.sensorData.getLatestResults, { limit: 10 });
+  const [chartFilter, setChartFilter] = useState<'all' | 'rain' | 'soil' | 'tilt'>('all');
 
   if (!latestResult) {
     return <DashboardSkeleton />;
@@ -85,8 +88,55 @@ export function Dashboard() {
     }
   };
 
+  // Prepare chart data
+  const chartData = history?.map((record) => ({
+    time: new Date(record.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    rain: record.rainValue,
+    soil: record.soilMoisture,
+    tilt: record.tiltValue,
+    risk: record.riskScore,
+    status: record.riskState
+  })).reverse() || [];
+
   return (
     <div className="space-y-6">
+      {/* Sensor Status Card */}
+      <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-white rounded-lg shadow-sm">
+                <Wifi className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Sensor Status</p>
+                <p className="text-lg font-semibold text-gray-900">Active</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-white rounded-lg shadow-sm">
+                <MapPin className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Location</p>
+                <p className="text-lg font-semibold text-gray-900">Site A - Zone 1 - UTP</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-white rounded-lg shadow-sm">
+                <Calendar className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Last Sync</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {new Date(latestResult.timestamp).toLocaleTimeString()}
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Risk Status Card */}
       <Card className={`border-2 ${getRiskColor(latestResult.riskState)}`}>
         <CardHeader>
@@ -141,40 +191,144 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Recent History */}
+      {/* Sensor Data Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent History</CardTitle>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <CardTitle>Sensor Data Trends</CardTitle>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setChartFilter('all')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  chartFilter === 'all'
+                    ? 'bg-green-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                All Sensors
+              </button>
+              <button
+                onClick={() => setChartFilter('rain')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  chartFilter === 'rain'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Rain
+              </button>
+              <button
+                onClick={() => setChartFilter('soil')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  chartFilter === 'soil'
+                    ? 'bg-amber-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Soil
+              </button>
+              <button
+                onClick={() => setChartFilter('tilt')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  chartFilter === 'tilt'
+                    ? 'bg-purple-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Tilt
+              </button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            {history?.map((record) => (
-              <div
-                key={record._id}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-              >
-                <div className="flex-1">
-                  <p className="text-sm font-medium">
-                    {new Date(record.timestamp).toLocaleString()}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    Rain: {record.rainValue.toFixed(1)} | Soil:{" "}
-                    {record.soilMoisture.toFixed(1)} | Tilt:{" "}
-                    {record.tiltValue.toFixed(1)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${getRiskColor(
-                      record.riskState
-                    )}`}
-                  >
-                    {record.riskState}
-                  </span>
-                  <span className="text-lg font-bold text-gray-700">
-                    {record.riskScore.toFixed(0)}%
-                  </span>
-                </div>
+          <ResponsiveContainer width="100%" height={400}>
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis 
+                dataKey="time" 
+                stroke="#6b7280"
+                style={{ fontSize: '12px' }}
+              />
+              <YAxis 
+                stroke="#6b7280"
+                style={{ fontSize: '12px' }}
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'white', 
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  padding: '12px'
+                }}
+                labelStyle={{ fontWeight: 'bold', marginBottom: '8px' }}
+              />
+              <Legend 
+                wrapperStyle={{ paddingTop: '20px' }}
+                iconType="line"
+              />
+              
+              {(chartFilter === 'all' || chartFilter === 'rain') && (
+                <Line 
+                  type="monotone" 
+                  dataKey="rain" 
+                  stroke="#2563eb" 
+                  strokeWidth={2}
+                  name="Rain Value"
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              )}
+              
+              {(chartFilter === 'all' || chartFilter === 'soil') && (
+                <Line 
+                  type="monotone" 
+                  dataKey="soil" 
+                  stroke="#d97706" 
+                  strokeWidth={2}
+                  name="Soil Moisture"
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              )}
+              
+              {(chartFilter === 'all' || chartFilter === 'tilt') && (
+                <Line 
+                  type="monotone" 
+                  dataKey="tilt" 
+                  stroke="#9333ea" 
+                  strokeWidth={2}
+                  name="Tilt Value"
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              )}
+              
+              <Line 
+                type="monotone" 
+                dataKey="risk" 
+                stroke="#dc2626" 
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                name="Risk %"
+                dot={{ r: 4 }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+          
+          {/* Risk Status Legend */}
+          <div className="mt-6 flex flex-wrap gap-3 justify-center">
+            {chartData.slice(-5).map((item, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <div className={`h-2 w-2 rounded-full ${
+                  item.status === 'High' ? 'bg-red-600' :
+                  item.status === 'Moderate' ? 'bg-yellow-600' : 'bg-green-600'
+                }`}></div>
+                <span className="text-xs text-gray-600">{item.time}</span>
+                <span className={`text-xs font-semibold ${
+                  item.status === 'High' ? 'text-red-600' :
+                  item.status === 'Moderate' ? 'text-yellow-600' : 'text-green-600'
+                }`}>{item.status}</span>
               </div>
             ))}
           </div>

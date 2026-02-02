@@ -1,11 +1,33 @@
 'use client';
 
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, UserButton, useAuth } from "@clerk/nextjs";
 import { SignIn } from "@clerk/nextjs";
 import { Dashboard } from "@/components/Dashboard";
 import { AlertTriangle, Radio, Bell, Zap, Mountain } from "lucide-react";
 
 export default function Home() {
+    const { isLoaded } = useAuth();
+
+    // Show loading screen while Clerk initializes
+    if (!isLoaded) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-white flex items-center justify-center">
+                <div className="text-center">
+                    <div className="relative mb-8">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="h-20 w-20 rounded-full bg-green-200 animate-ping opacity-20"></div>
+                        </div>
+                        <div className="relative p-6 bg-gradient-to-br from-green-500 to-green-700 rounded-2xl shadow-lg">
+                            <Mountain className="h-12 w-12 text-white animate-pulse" />
+                        </div>
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Slope Sentry</h2>
+                    <p className="text-gray-600">Initializing system...</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <>
             <SignedIn>
