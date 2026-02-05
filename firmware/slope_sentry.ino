@@ -1,39 +1,37 @@
 /*
-  Slope Sentry - ESP32 Firmware Skeleton
+  Slope Sentry - ESP32 Firmware (Final Version)
   --------------------------------------
   Hardware:
-  - ESP32 Development Board
-  - Rain Sensor (Analog)
-  - Capacitive Soil Moisture Sensor (Analog)
-  - MPU6050 Accelerometer/Gyroscope (I2C)
-
-  Functionality:
-  - Connects to WiFi
-  - Reads sensor values
-  - Packages data as JSON
-  - Sends HTTP POST request to Flask Backend
+  - ESP32 Development Board (DOIT DevKit V1)
+  - Rain Sensor (Analog Pin 34 + Digital Pin 14)
+  - Capacitive Soil Moisture Sensor (Analog Pin 32)
+  - MPU6050 Accelerometer/Gyroscope (I2C Pins 21, 22)
+  - 3x LEDs (Pins 17, 5, 18)
 */
-
-// code that will be tested using the Arduino IDE (ESP32 installed)
 
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <Wire.h>
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
-#include <ArduinoJson.h> // Make sure to install ArduinoJson library
+#include <ArduinoJson.h> // Ensure you have installed "ArduinoJson" by Benoit Blanchon
 
 // --- CONFIGURATION ---
-const char *WIFI_SSID = "YOUR_WIFI_SSID";
-const char *WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+const char *WIFI_SSID = "";                                                  // <--- ENTER WIFI NAME
+const char *WIFI_PASSWORD = "";                                              // <--- ENTER WIFI PASSWORD
+const char *SERVER_URL = "https://your-development.convex.site/sensor-data"; // <--- ENTER CONVEX URL
 
-// Backend API Endpoint (Replace IP with your PC's IP address)
-// Run `ipconfig` (Windows) or `ifconfig` (Linux/Mac) to find your local IP.
-const char *SERVER_URL = "http://192.168.1.100:5000/api/sensor-data";
+// --- PIN DEFINITIONS ---
+const int PIN_RAIN_ANALOG = 34;  // Analog data (0-100%)
+const int PIN_RAIN_DIGITAL = 14; // Digital Trigger (Wet/Dry)
+const int PIN_SOIL = 32;         // Analog data
+const int PIN_LED_RAIN = 17;     // Alert LED
+const int PIN_LED_SOIL = 5;      // Alert LED
+const int PIN_LED_TILT = 18;     // Alert LED
 
-// Pin Definitions
-const int PIN_RAIN = 34;          // Analog pin for Rain Sensor
-const int PIN_SOIL_MOISTURE = 35; // Analog pin for Soil Moisture
+// --- THRESHOLDS ---
+const int THRESHOLD_SOIL = 2000;   // Trigger LED if value is below this
+const float THRESHOLD_TILT = 20.0; // Trigger LED if angle > 20 degrees
 
 // MPU6050 Object
 Adafruit_MPU6050 mpu;
@@ -41,65 +39,112 @@ Adafruit_MPU6050 mpu;
 void setup()
 {
   Serial.begin(115200);
+  while (!Serial)
+    delay(10); // Wait for Serial Monitor
 
-  // 1. Initialize Sensors
-  pinMode(PIN_RAIN, INPUT);
-  pinMode(PIN_SOIL_MOISTURE, INPUT);
+  // 1. Initialize LED Pins
+  pinMode(PIN_LED_RAIN, OUTPUT);
+  pinMode(PIN_LED_SOIL, OUTPUT);
+  pinMode(PIN_LED_TILT, OUTPUT);
 
-  // Initialize MPU6050
-  if (!mpu.begin())
+  // 2. Initialize Sensor Pins
+  pinMode(PIN_RAIN_DIGITAL, INPUT);
+  // Analog pins (34, 32) are input by default, but good practice to declare logic if needed
+
+  // 3. Initialize MPU6050 (With Address Check)
+  Serial.println("Initializing MPU6050...");
+  Wire.begin(21, 22); // Force SDA, SCL
+
+  if (!mpu.begin(0x68))
   {
-    Serial.println("Failed to find MPU6050 chip");
-    /* In production, we might want to halt or retry.
-       For PoC, we continue to allow other sensors to work. */
+    Serial.println("Address 0x68 failed. Trying 0x69...");
+    if (!mpu.begin(0x69))
+    {
+      Serial.println("CRITICAL: MPU6050 not found!");
+      // We continue so the other sensors still work
+    }
   }
-  else
+
+  if (mpu.getAccelerometerRange() != MPU6050_RANGE_8_G)
   {
-    Serial.println("MPU6050 Found!");
     mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
     mpu.setGyroRange(MPU6050_RANGE_500_DEG);
     mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
+    Serial.println("MPU6050 Configured.");
   }
 
-  // 2. Connect to WiFi
+  // 4. Connect to WiFi
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to WiFi");
   while (WiFi.status() != WL_CONNECTED)
   {
-    delay(1000);
+    delay(500);
     Serial.print(".");
   }
-  Serial.println("\nConnected to network");
-  Serial.println(WiFi.localIP());
+  Serial.println("\nWiFi Connected!");
 }
 
 void loop()
 {
   // --- READ DATA ---
 
-  // 1. Rain Sensor (Values usually 0-4095, Lower is wetter for resistive sensors)
-  // We invert this for logic: 0 = Dry, 100% = Wettest
-  int rainRaw = analogRead(PIN_RAIN);
-  // Map 4095(Dry) -> 0(Wet) to 0-100 logic roughly for visualization
+  // 1. Rain Sensor
+  int rainRaw = analogRead(PIN_RAIN_ANALOG);
+  int rainDigital = digitalRead(PIN_RAIN_DIGITAL); // Read 0 (Wet) or 1 (Dry)
+
+  // Map 4095(Dry) -> 0(Wet) to 0-100%
   float rainValue = map(rainRaw, 4095, 0, 0, 100);
   if (rainValue < 0)
     rainValue = 0;
 
   // 2. Soil Moisture
-  int soilRaw = analogRead(PIN_SOIL_MOISTURE);
-  float soilValue = map(soilRaw, 4095, 0, 0, 100); // Calibration needed in field
+  int soilRaw = analogRead(PIN_SOIL);
+  float soilValue = map(soilRaw, 4095, 0, 0, 100);
   if (soilValue < 0)
     soilValue = 0;
 
-  // 3. Tilt / Movement (MPU6050)
+  // 3. Tilt (MPU6050)
   sensors_event_t a, g, temp;
   float tiltValue = 0.0;
 
-  if (mpu.getEvent(&a, &g, &temp))
+  // Only try to read if MPU is connected
+  if (mpu.getAccelerometerRange() != 0)
   {
-    // Simple Tilt Calculation: Magnitude of acceleration on X/Y axes
-    // If the sensor is flat, X and Y should be near 0.
-    tiltValue = sqrt(pow(a.acceleration.x, 2) + pow(a.acceleration.y, 2));
+    mpu.getEvent(&a, &g, &temp);
+    // Calculate Tilt Angle (Y/Z axis method)
+    tiltValue = abs(atan2(a.acceleration.y, a.acceleration.z) * 180 / PI);
+  }
+
+  // --- LED ALERT LOGIC ---
+
+  // Rain LED (Use Digital Pin for fast response)
+  if (rainDigital == LOW)
+  {
+    digitalWrite(PIN_LED_RAIN, HIGH);
+  }
+  else
+  {
+    digitalWrite(PIN_LED_RAIN, LOW);
+  }
+
+  // Soil LED (Threshold check)
+  if (soilRaw < THRESHOLD_SOIL)
+  {
+    digitalWrite(PIN_LED_SOIL, HIGH);
+  }
+  else
+  {
+    digitalWrite(PIN_LED_SOIL, LOW);
+  }
+
+  // Tilt LED (Angle check)
+  if (tiltValue > THRESHOLD_TILT)
+  {
+    digitalWrite(PIN_LED_TILT, HIGH);
+  }
+  else
+  {
+    digitalWrite(PIN_LED_TILT, LOW);
   }
 
   // --- SEND DATA ---
@@ -111,7 +156,7 @@ void loop()
     http.addHeader("Content-Type", "application/json");
 
     // Create JSON Payload
-    // capacity calculated using: https://arduinojson.org/v6/assistant/
+    // keys match your Convex Database Screenshot
     StaticJsonDocument<200> doc;
     doc["rain_value"] = rainValue;
     doc["soil_moisture"] = soilValue;
@@ -131,8 +176,6 @@ void loop()
       String response = http.getString();
       Serial.print("Response code: ");
       Serial.println(httpResponseCode);
-      Serial.print("Response: ");
-      Serial.println(response);
     }
     else
     {
@@ -147,6 +190,6 @@ void loop()
     Serial.println("WiFi Disconnected");
   }
 
-  // Send every 5 seconds
-  delay(5000);
+  // Send every 10 seconds
+  delay(10000);
 }
