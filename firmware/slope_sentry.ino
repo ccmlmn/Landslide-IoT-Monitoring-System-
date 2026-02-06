@@ -17,9 +17,9 @@
 #include <ArduinoJson.h> // Ensure you have installed "ArduinoJson" by Benoit Blanchon
 
 // --- CONFIGURATION ---
-const char *WIFI_SSID = "";                                                  // <--- ENTER WIFI NAME
-const char *WIFI_PASSWORD = "";                                              // <--- ENTER WIFI PASSWORD
-const char *SERVER_URL = "https://your-development.convex.site/sensor-data"; // <--- ENTER CONVEX URL
+const char *WIFI_SSID = "your wifi name";                                  // <--- ENTER WIFI NAME
+const char *WIFI_PASSWORD = "your wifi password";                          // <--- ENTER WIFI PASSWORD
+const char *SERVER_URL = "https://tidy-lemur-925.convex.site/sensor-data"; // <--- ENTER CONVEX URL
 
 // --- PIN DEFINITIONS ---
 const int PIN_RAIN_ANALOG = 34;  // Analog data (0-100%)
@@ -27,7 +27,8 @@ const int PIN_RAIN_DIGITAL = 14; // Digital Trigger (Wet/Dry)
 const int PIN_SOIL = 32;         // Analog data
 const int PIN_LED_RAIN = 17;     // Alert LED
 const int PIN_LED_SOIL = 5;      // Alert LED
-const int PIN_LED_TILT = 18;     // Alert LED
+const int PIN_LED_TILT = 18;
+const int PIN_BUZZER = 19; // Alert LED
 
 // --- THRESHOLDS ---
 const int THRESHOLD_SOIL = 2000;   // Trigger LED if value is below this
@@ -46,6 +47,7 @@ void setup()
   pinMode(PIN_LED_RAIN, OUTPUT);
   pinMode(PIN_LED_SOIL, OUTPUT);
   pinMode(PIN_LED_TILT, OUTPUT);
+  pinMode(PIN_BUZZER, OUTPUT);
 
   // 2. Initialize Sensor Pins
   pinMode(PIN_RAIN_DIGITAL, INPUT);
@@ -176,13 +178,36 @@ void loop()
       String response = http.getString();
       Serial.print("Response code: ");
       Serial.println(httpResponseCode);
+      Serial.print("Response: ");
+      Serial.println(response);
+
+      // Parse JSON response: expects {"riskState":"low|moderate|high"}
+      StaticJsonDocument<256> respDoc;
+      DeserializationError err = deserializeJson(respDoc, response);
+
+      if (!err)
+      {
+        const char *riskState = respDoc["riskState"];
+        if (riskState && strcmp(riskState, "High") == 0)
+        {
+          digitalWrite(PIN_BUZZER, HIGH);
+        }
+        else
+        {
+          digitalWrite(PIN_BUZZER, LOW);
+        }
+      }
+      else
+      {
+        digitalWrite(PIN_BUZZER, LOW); // fail-safe
+      }
     }
     else
     {
       Serial.print("Error on sending POST: ");
       Serial.println(httpResponseCode);
+      digitalWrite(PIN_BUZZER, LOW); // fail-safe
     }
-
     http.end();
   }
   else
