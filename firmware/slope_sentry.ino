@@ -17,9 +17,9 @@
 #include <ArduinoJson.h> // Ensure you have installed "ArduinoJson" by Benoit Blanchon
 
 // --- CONFIGURATION ---
-const char *WIFI_SSID = "your wifi name";                                  // <--- ENTER WIFI NAME
-const char *WIFI_PASSWORD = "your wifi password";                          // <--- ENTER WIFI PASSWORD
-const char *SERVER_URL = "https://tidy-lemur-925.convex.site/sensor-data"; // <--- ENTER CONVEX URL
+const char *WIFI_SSID = "your wifi name";                                         // <--- ENTER WIFI NAME
+const char *WIFI_PASSWORD = "your wifi password";                                 // <--- ENTER WIFI PASSWORD
+const char *SERVER_URL = "https://your-development-site.convex.site/sensor-data"; // <--- ENTER CONVEX URL
 
 // --- PIN DEFINITIONS ---
 const int PIN_RAIN_ANALOG = 34;  // Analog data (0-100%)
