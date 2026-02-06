@@ -36,11 +36,16 @@ http.route({
         tiltValue: tilt_value,
       });
 
+
+      // Fetch latest riskState from anomalyResults
+      const latestAnomaly = await ctx.runQuery(api.anomalyResults.getLatest);
+
       return new Response(
         JSON.stringify({ 
           status: "success", 
           id,
-          message: "Data received" 
+          message: "Data received",
+          riskState: latestAnomaly?.riskState || "low"
         }),
         { status: 201, headers: { "Content-Type": "application/json" } }
       );
@@ -49,7 +54,8 @@ http.route({
       return new Response(
         JSON.stringify({ 
           status: "error", 
-          message: String(error) 
+          message: String(error),
+          riskState: "low"
         }),
         { status: 500, headers: { "Content-Type": "application/json" } }
       );
