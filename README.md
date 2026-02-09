@@ -197,7 +197,7 @@ landslide-iot-system/
 - `POST /sensor-data` - Receive sensor data from ESP32
 - `GET /health` - Health check
 
-### Convex Queries (React hooks)
+### Convex Queries (React hooks) (testing)
 
 - `getLatestResult` - Get most recent risk analysis
 - `getLatestResults` - Get recent history
