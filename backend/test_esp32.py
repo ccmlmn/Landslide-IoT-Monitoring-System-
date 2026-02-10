@@ -12,13 +12,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Your Convex deployment URL
-CONVEX_URL = os.getenv("CONVEX_URL", "https://your-deployment.convex.cloud")
+CONVEX_URL = os.getenv("CONVEX_URL_SITE", "https://your-deployment.convex.site")
 
 def send_sensor_data():
     """Simulate ESP32 sending sensor data"""
     
     # Generate realistic random sensor values
-    rain_value = random.uniform(0, 100)  # 0-100 mm
+    rain_value = random.uniform(0, 100)  # 0-100
     soil_moisture = random.uniform(20, 90)  # 20-90%
     tilt_value = random.uniform(0, 45)  # 0-45 degrees
     

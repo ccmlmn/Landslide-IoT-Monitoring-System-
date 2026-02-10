@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, Droplets, Mountain, Activity, MapPin, Wifi, Calendar } from "lucide-react";
+import { AlertTriangle, Droplets, Mountain, Activity } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 function DashboardSkeleton() {
@@ -100,43 +100,6 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Sensor Status Card */}
-      <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-white rounded-lg shadow-sm">
-                <Wifi className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Sensor Status</p>
-                <p className="text-lg font-semibold text-gray-900">Active</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-white rounded-lg shadow-sm">
-                <MapPin className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Location</p>
-                <p className="text-lg font-semibold text-gray-900">Site A - Zone 1 - UTP</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-white rounded-lg shadow-sm">
-                <Calendar className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Last Sync</p>
-                <p className="text-lg font-semibold text-gray-900">
-                  {new Date(latestResult.timestamp).toLocaleTimeString()}
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Risk Status Card */}
       <Card className={`border-2 ${getRiskColor(latestResult.riskState)}`}>
         <CardHeader>

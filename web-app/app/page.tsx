@@ -3,7 +3,20 @@
 import { SignedIn, SignedOut, UserButton, useAuth } from "@clerk/nextjs";
 import { SignIn } from "@clerk/nextjs";
 import { Dashboard } from "@/components/Dashboard";
+import { AppLayout } from "@/components/AppLayout";
 import { AlertTriangle, Radio, Bell, Zap, Mountain } from "lucide-react";
+
+function DashboardLayout() {
+    return (
+        <AppLayout>
+            <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Dashboard Overview</h2>
+                <p className="text-gray-600">Real-time landslide risk monitoring</p>
+            </div>
+            <Dashboard />
+        </AppLayout>
+    );
+}
 
 export default function Home() {
     const { isLoaded } = useAuth();
@@ -31,23 +44,8 @@ export default function Home() {
     return (
         <>
             <SignedIn>
-                {/* Authenticated View - Dashboard */}
-                <main className="min-h-screen bg-gray-50">
-                    <header className="bg-white shadow-sm border-b">
-                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <AlertTriangle className="h-8 w-8 text-red-600" />
-                                <h1 className="text-2xl font-bold text-gray-900">
-                                    Landslide Monitoring System
-                                </h1>
-                            </div>
-                            <UserButton />
-                        </div>
-                    </header>
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                        <Dashboard />
-                    </div>
-                </main>
+                {/* Authenticated View - Dashboard with Sidebar */}
+                <DashboardLayout />
             </SignedIn>
 
             <SignedOut>

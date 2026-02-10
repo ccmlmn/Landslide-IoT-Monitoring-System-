@@ -7,7 +7,7 @@ from anomaly_detector import AnomalyDetector
 # Load environment variables
 load_dotenv()
 
-CONVEX_URL = os.getenv("CONVEX_URL")
+CONVEX_URL = os.getenv("CONVEX_URL_CLOUD", "https://your-deployment.convex.cloud")
 POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "5"))  # seconds
 
 def main():
