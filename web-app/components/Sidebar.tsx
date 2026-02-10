@@ -22,6 +22,14 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
   return (
     <>
+      {/* Backdrop - dims background on mobile */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/20 z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+
       {/* Sidebar */}
       <div
         className={`flex flex-col w-64 bg-white border-r border-gray-200 h-screen transition-transform duration-300 ease-in-out
