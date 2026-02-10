@@ -24,33 +24,48 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   // Prevent body scroll when sidebar is open on mobile
   useEffect(() => {
     if (isOpen) {
+      // Prevent scrolling on both body and html
       document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.documentElement.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = 'unset';
+      // Restore scrolling
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.documentElement.style.overflow = '';
     }
+    
     return () => {
-      document.body.style.overflow = 'unset';
+      // Cleanup on unmount
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.documentElement.style.overflow = '';
     };
   }, [isOpen]);
 
   return (
     <>
-      {/* Backdrop - dims background on mobile */}
+      {/* Backdrop - dims background and prevents scroll on mobile */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden touch-none"
           onClick={onClose}
+          onTouchMove={(e) => e.preventDefault()}
         />
       )}
 
       {/* Sidebar */}
       <div
-        className={`flex flex-col w-64 bg-white h-full min-h-screen transition-transform duration-300 ease-in-out
-          fixed lg:sticky top-0 bottom-0 z-50
-          lg:translate-x-0 lg:border-r lg:border-gray-200 lg:shadow-none
-          shadow-2xl
+        className={`flex flex-col w-64 bg-white transition-transform duration-300 ease-in-out
+          fixed inset-y-0 left-0 z-50
+          lg:sticky lg:top-0 lg:h-screen lg:border-r lg:border-gray-200 lg:shadow-none
+          h-screen shadow-2xl
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
+        onTouchMove={(e) => e.stopPropagation()}
       >
         {/* Logo/Brand */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
