@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import { LayoutDashboard, Activity, TrendingUp, AlertTriangle, Settings, Mountain, X } from "lucide-react";
 
 const navigation = [
@@ -20,21 +21,34 @@ interface SidebarProps {
 export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname();
 
+  // Prevent body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   return (
     <>
       {/* Backdrop - dims background on mobile */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/20 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/30 z-40 lg:hidden"
           onClick={onClose}
         />
       )}
 
       {/* Sidebar */}
       <div
-        className={`flex flex-col w-64 bg-white border-r border-gray-200 h-screen transition-transform duration-300 ease-in-out
-          fixed lg:sticky top-0 z-50
-          lg:translate-x-0
+        className={`flex flex-col w-64 bg-white h-full min-h-screen transition-transform duration-300 ease-in-out
+          fixed lg:sticky top-0 bottom-0 z-50
+          lg:translate-x-0 lg:border-r lg:border-gray-200 lg:shadow-none
+          shadow-2xl
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
