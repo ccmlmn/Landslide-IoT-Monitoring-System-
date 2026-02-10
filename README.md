@@ -381,15 +381,9 @@ The system uses a statistical anomaly detection approach:
 - [ ] Enhanced UI design with more visualizations
 - [ ] Machine learning models for predictive analysis
 - [ ] SMS/Email alert notifications via Twilio/SendGrid
-- [ ] Historical data export (CSV, JSON)
-- [ ] Multi-location monitoring support
 - [ ] Admin panel for system configuration
-- [ ] Mobile app (React Native)
-- [ ] Battery backup status monitoring
 - [ ] Weather API integration for correlation
 - [ ] Customizable risk thresholds
-- [ ] Data retention policies
-- [ ] Advanced statistical models (ARIMA, LSTM)
 - [ ] Geolocation mapping with risk zones
 - [ ] Alert escalation workflows
 
