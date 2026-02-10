@@ -32,10 +32,10 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
       {/* Sidebar */}
       <div
-        className={`flex flex-col w-64 bg-white border-r border-gray-200 h-screen sticky top-0 transition-transform duration-300 ease-in-out z-50
-          lg:translate-x-0 lg:static
-          fixed
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        className={`flex flex-col w-64 bg-white border-r border-gray-200 h-screen transition-transform duration-300 ease-in-out
+          fixed lg:sticky top-0 z-50
+          lg:translate-x-0
+          ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Logo/Brand */}
