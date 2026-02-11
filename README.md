@@ -385,7 +385,3 @@ The system uses a statistical anomaly detection approach:
 - [ ] Weather API integration for correlation
 - [ ] Customizable risk thresholds
 - [ ] Geolocation mapping with risk zones
-
-## License
-
-MIT
