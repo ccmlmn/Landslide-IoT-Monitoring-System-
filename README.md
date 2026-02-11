@@ -90,7 +90,9 @@ cp .env.example .env
 Edit `.env` with your Convex URL:
 
 ```env
-CONVEX_URL=https://your-deployment.convex.cloud
+CONVEX_URL_CLOUD =https://your-deployment.convex.cloud
+CONVEX_URL_SITE =https://your-deployment.convex.site
+
 POLL_INTERVAL=5
 ```
 
@@ -173,7 +175,7 @@ Upload to ESP32 using Arduino IDE:
 
 1. Install ESP32 board support
 2. Install required libraries: `Adafruit MPU6050`, `ArduinoJson`
-3. Select board: "DOIT ESP32 DEVKIT V1"
+3. Select board: "ESP32 DEVKIT V1"
 4. Connect ESP32 and upload
 
 ### 9. View the Dashboard
@@ -353,7 +355,6 @@ The system uses a statistical anomaly detection approach:
 
 - Verify `CONVEX_URL` in `backend/.env`
 - Make sure `npx convex dev` is running
-- Check the URL format: `https://xxx.convex.site` (not `.cloud`)
 
 ### Dashboard shows "Waiting for sensor data"
 
@@ -379,13 +380,11 @@ The system uses a statistical anomaly detection approach:
 ## Future Improvements
 
 - [ ] Enhanced UI design with more visualizations
-- [ ] Machine learning models for predictive analysis
-- [ ] SMS/Email alert notifications via Twilio/SendGrid
+- [ ] SMS/Email alert notifications
 - [ ] Admin panel for system configuration
 - [ ] Weather API integration for correlation
 - [ ] Customizable risk thresholds
 - [ ] Geolocation mapping with risk zones
-- [ ] Alert escalation workflows
 
 ## License
 
