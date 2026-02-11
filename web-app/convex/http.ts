@@ -36,16 +36,106 @@ http.route({
         tiltValue: tilt_value,
       });
 
+      // Get recent history for anomaly detection
+      const recentData = await ctx.runQuery(api.sensorData.getLatestResults, { limit: 20 });
+      
+      // Build history object from recent data
+      const history: { rain: number[], soil: number[], tilt: number[] } = {
+        rain: recentData.map(d => d.rainValue),
+        soil: recentData.map(d => d.soilMoisture),
+        tilt: recentData.map(d => d.tiltValue)
+      };
 
-      // Fetch latest riskState from anomalyResults
+      // Calculate risk using Python serverless function (preferred) or TypeScript fallback
+      let riskResult = null;
+      
+      try {
+        // Try Python serverless function first (for production)
+        const deploymentUrl = process.env.NEXT_PUBLIC_VERCEL_URL || process.env.VERCEL_URL;
+        const apiUrl = deploymentUrl 
+          ? `https://${deploymentUrl}/api/calculate-risk`
+          : 'http://localhost:3000/api/calculate-risk';
+        
+        const riskResponse = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rainValue: rain_value,
+            soilMoisture: soil_moisture,
+            tiltValue: tilt_value,
+            history: history
+          }),
+        });
+
+        if (riskResponse.ok) {
+          const riskData = await riskResponse.json();
+          
+          if (riskData.success) {
+            riskResult = {
+              riskScore: riskData.data.riskScore,
+              riskState: riskData.data.riskState,
+              zScores: riskData.data.zScores
+            };
+          }
+        }
+      } catch (error) {
+        console.error("Python API unavailable, using TypeScript fallback:", error);
+      }
+
+      // Fallback to TypeScript implementation if Python failed
+      if (!riskResult) {
+        try {
+          riskResult = await ctx.runAction(api.anomalyDetection.calculateRisk, {
+            rainValue: rain_value,
+            soilMoisture: soil_moisture,
+            tiltValue: tilt_value,
+          });
+        } catch (error) {
+          console.error("TypeScript fallback failed:", error);
+        }
+      }
+
+      // If we have a risk result, save it
+      if (riskResult) {
+        const timestamp = new Date().toISOString();
+        
+        await ctx.runMutation(api.sensorData.addAnomalyResult, {
+          sensorDataId: id,
+          timestamp: timestamp,
+          rainValue: rain_value,
+          soilMoisture: soil_moisture,
+          tiltValue: tilt_value,
+          riskScore: riskResult.riskScore,
+          riskState: riskResult.riskState,
+          zScoreRain: riskResult.zScores.rain,
+          zScoreSoil: riskResult.zScores.soil,
+          zScoreTilt: riskResult.zScores.tilt,
+        });
+
+        // Mark as processed
+        await ctx.runMutation(api.sensorData.markAsProcessed, { id });
+
+        return new Response(
+          JSON.stringify({ 
+            status: "success", 
+            id,
+            message: "Data received and processed",
+            riskState: riskResult.riskState,
+            riskScore: riskResult.riskScore
+          }),
+          { status: 201, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      // Final fallback: Return last known risk state
       const latestAnomaly = await ctx.runQuery(api.anomalyResults.getLatest);
 
       return new Response(
         JSON.stringify({ 
           status: "success", 
           id,
-          message: "Data received",
-          riskState: latestAnomaly?.riskState || "low"
+          message: "Data received (risk calculation pending)",
+          riskState: latestAnomaly?.riskState || "Low"
         }),
         { status: 201, headers: { "Content-Type": "application/json" } }
       );
@@ -55,7 +145,7 @@ http.route({
         JSON.stringify({ 
           status: "error", 
           message: String(error),
-          riskState: "low"
+          riskState: "Low"
         }),
         { status: 500, headers: { "Content-Type": "application/json" } }
       );
