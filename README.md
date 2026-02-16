@@ -269,18 +269,18 @@ landslide-iot-system/
 3. **Convex** stores raw sensor data in `sensorData` table
 4. **Python backend** polls Convex every 5 seconds for unprocessed data
 5. **Python** applies hybrid risk assessment using dual methods:
-   
+
    **Method A - Statistical Z-Score:**
    - Maintains rolling window of last 20 readings for each sensor
    - Calculates mean and standard deviation
    - Computes Z-score: `Z = (Current - Mean) / StdDev`
    - Maps to statistical risk percentage (Z=3 sigma = 100% risk)
-   
+
    **Method B - Fixed Thresholds:**
    - Compares each sensor value against warning/danger thresholds
    - Tilt: 15°/25°, Soil: 70%/85%, Rain: 50/75
    - Determines threshold-based risk level
-   
+
    **Hybrid Combination:**
    - Takes the WORSE result from both methods (conservative fail-safe)
    - Classifies final risk as Low (<30%), Moderate (30-60%), or High (>60%)
@@ -349,7 +349,7 @@ landslide-iot-system/
 
 ### Interactive Dashboard
 
-- **Multi-page Application**: 
+- **Multi-page Application**:
   - **Overview**: Main dashboard with combined risk assessment
   - **Live Monitoring**: Detailed sensor analytics with threshold visualization
   - **Historical Trends**: Time-series analysis (coming soon)
@@ -417,6 +417,7 @@ final_state = worse_of(statistical_state, threshold_state)
 ```
 
 **Why Both Methods?**
+
 - **Z-Score catches**: Sudden changes, early warnings, rate of change
 - **Thresholds catch**: Slow creep, absolute danger levels, engineering limits
 - **Combined**: Maximum safety for life-critical landslide detection
@@ -431,10 +432,8 @@ final_state = worse_of(statistical_state, threshold_state)
 
 1. **Rapid Acceleration**: Tilt 2° → 8° (Z=4.5, but <15°)
    - Z-Score: HIGH | Threshold: NORMAL → **Final: HIGH**
-   
 2. **Slow Creep**: Tilt gradually increases to 26°
    - Z-Score: NORMAL | Threshold: HIGH → **Final: HIGH**
-   
 3. **Normal Operation**: Stable readings within limits
    - Z-Score: NORMAL | Threshold: NORMAL → **Final: NORMAL**
 
