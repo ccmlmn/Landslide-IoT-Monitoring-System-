@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as anomalyDetection from "../anomalyDetection.js";
 import type * as anomalyResults from "../anomalyResults.js";
 import type * as http from "../http.js";
 import type * as sensorData from "../sensorData.js";
@@ -19,6 +20,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  anomalyDetection: typeof anomalyDetection;
   anomalyResults: typeof anomalyResults;
   http: typeof http;
   sensorData: typeof sensorData;
