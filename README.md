@@ -9,7 +9,8 @@ ESP32 (Sensors) → Convex (HTTP Endpoint) → Database
                                               ↓
                                     Python Backend (Polls)
                                               ↓
-                                    Z-Score Calculation
+                            Hybrid Risk Assessment Engine
+                        (Z-Score Statistics + Fixed Thresholds)
                                               ↓
                                     Convex (Anomaly Results)
                                               ↓
@@ -267,21 +268,37 @@ landslide-iot-system/
 2. **ESP32** sends data via HTTP POST to Convex endpoint with WiFi connectivity
 3. **Convex** stores raw sensor data in `sensorData` table
 4. **Python backend** polls Convex every 5 seconds for unprocessed data
-5. **Python** calculates Z-scores using a rolling window of 20 readings:
-   - Calculates mean and standard deviation for each sensor
+5. **Python** applies hybrid risk assessment using dual methods:
+   
+   **Method A - Statistical Z-Score:**
+   - Maintains rolling window of last 20 readings for each sensor
+   - Calculates mean and standard deviation
    - Computes Z-score: `Z = (Current - Mean) / StdDev`
-   - Combines scores with weighted average
-   - Maps to risk percentage (Z=3 sigma = 100% risk)
-   - Classifies as Low (<30%), Moderate (30-60%), or High (>60%)
-6. **Python** saves results to `anomalyResults` table in Convex
+   - Maps to statistical risk percentage (Z=3 sigma = 100% risk)
+   
+   **Method B - Fixed Thresholds:**
+   - Compares each sensor value against warning/danger thresholds
+   - Tilt: 15°/25°, Soil: 70%/85%, Rain: 50/75
+   - Determines threshold-based risk level
+   
+   **Hybrid Combination:**
+   - Takes the WORSE result from both methods (conservative fail-safe)
+   - Classifies final risk as Low (<30%), Moderate (30-60%), or High (>60%)
+
+6. **Python** saves comprehensive results to `anomalyResults` table in Convex:
+   - Risk scores, Z-scores, threshold status, rolling averages
 7. **Next.js dashboard** subscribes to real-time updates from Convex
-8. **Dashboard** displays:
-   - Current risk level with color-coded status
+8. **Overview Dashboard** displays:
+   - Combined risk level with color-coded status
    - Live sensor values (rain, soil moisture, tilt)
    - Interactive charts showing historical trends
-   - Recent history of sensor readings
-   - Z-scores for each sensor
+   - Recent history of sensor readings with Z-scores
    - Timestamp and location information
+9. **Live Monitoring Page** shows detailed analytics:
+   - Individual sensor cards with threshold status
+   - Warning and danger threshold lines on charts
+   - Rolling mean visualization
+   - Both Z-score and threshold-based analysis
 
 ## API Endpoints
 
@@ -318,22 +335,33 @@ landslide-iot-system/
 
 ### Intelligent Risk Analysis
 
-- Z-score based statistical anomaly detection
-- Rolling window algorithm (20 readings)
+- **Hybrid Detection System**: Combines statistical and threshold-based approaches for maximum safety
+  - **Z-Score Analysis**: Statistical anomaly detection using rolling window (20 readings)
+  - **Fixed Thresholds**: Engineering/geological safety limits for each sensor
+- **Conservative Fail-Safe**: Takes the WORSE result from both methods
 - Multi-sensor data fusion (rain, soil moisture, tilt)
 - Three-tier risk classification: Low, Moderate, High
-- Individual sensor Z-scores tracking
+- Individual sensor Z-scores and threshold status tracking
+- **Threshold Values**:
+  - **Tilt**: Warning 15°, Danger 25° (geological instability limits)
+  - **Soil Moisture**: Warning 70%, Danger 85% (saturation/liquefaction)
+  - **Rain**: Warning 50, Danger 75 (intensity thresholds)
 
 ### Interactive Dashboard
 
-- **Multi-page Application**: Navigate between Overview, Live Monitoring, Historical Trends, Alerts & Logs, and Settings
+- **Multi-page Application**: 
+  - **Overview**: Main dashboard with combined risk assessment
+  - **Live Monitoring**: Detailed sensor analytics with threshold visualization
+  - **Historical Trends**: Time-series analysis (coming soon)
+  - **Alerts & Logs**: Event history and notifications (coming soon)
+  - **Settings**: System configuration (coming soon)
 - **Responsive Layout**: Mobile-first design with collapsible sidebar and hamburger menu
-- **Real-time Charts**: Interactive sensor trends visualization with Recharts
+- **Real-time Charts**: Interactive sensor trends with threshold lines and rolling averages
+- **Threshold Visualization**: Warning and danger lines on all charts
 - **Header Bar**: Shows online status, last updated time, dark mode toggle, and user profile
 - **Navigation Sidebar**: Easy access to all sections with active page highlighting
-- **Historical Data**: Visualization of sensor readings over time
-- **Recent Activity Feed**: Timestamped sensor readings
-- **Color-coded Risk Status**: Green (Low), Yellow (Moderate), Red (High)
+- **Color-coded Cards**: Sensor status cards change color based on threshold breach
+- **Dual Method Display**: Shows both Z-scores and threshold status for each sensor
 - **Loading States**: Skeleton screens for better UX during data fetching
 
 ### Hardware Integration
@@ -352,21 +380,63 @@ landslide-iot-system/
 - HTTPS communication
 - Session management across all pages
 
-## Z-Score Algorithm Details
+## Hybrid Risk Assessment Algorithm
 
-The system uses a statistical anomaly detection approach:
+The system uses a **dual-method approach** for maximum safety, combining statistical and threshold-based detection:
+
+### Method 1: Statistical Z-Score Analysis
 
 1. **Rolling Window**: Maintains last 20 readings for each sensor
 2. **Z-Score Calculation**: `Z = (Current - Mean) / StdDev`
-3. **Risk Mapping**:
+3. **Statistical Risk**:
    - Averages absolute Z-scores from all sensors
    - Maps Z-score (0-3) to risk percentage (0-100%)
    - Z ≥ 3 (3 standard deviations) = 100% risk
-4. **Risk Classification**:
-   - **Low**: 0-30% risk (Green)
-   - **Moderate**: 30-60% risk (Yellow)
-   - **High**: 60-100% risk (Red)
-5. **Critical Triggers**: Automatic 100% risk if any sensor exceeds 3 sigma
+4. **Advantage**: Detects rapid changes and unusual patterns
+5. **Use Case**: Catches sudden acceleration even if values are still "safe"
+
+### Method 2: Fixed Threshold Checking
+
+1. **Predefined Limits**: Based on engineering/geological safety standards
+   - **Tilt**: Warning 15°, Danger 25°
+   - **Soil Moisture**: Warning 70%, Danger 85%
+   - **Rain**: Warning 50, Danger 75
+2. **Threshold Risk**:
+   - Danger (any sensor) = 100% risk
+   - Warning (2+ sensors) = 80% risk
+   - Warning (1 sensor) = 50% risk
+3. **Advantage**: Respects absolute physical limits
+4. **Use Case**: Prevents exceeding structural failure points
+
+### Hybrid Combination Logic
+
+```python
+# Conservative fail-safe approach
+final_risk = max(statistical_risk, threshold_risk)
+final_state = worse_of(statistical_state, threshold_state)
+```
+
+**Why Both Methods?**
+- **Z-Score catches**: Sudden changes, early warnings, rate of change
+- **Thresholds catch**: Slow creep, absolute danger levels, engineering limits
+- **Combined**: Maximum safety for life-critical landslide detection
+
+### Risk Classification
+
+- **Low**: 0-30% risk (Green) - Both methods agree it's safe
+- **Moderate**: 30-60% risk (Yellow) - One method detects concern
+- **High**: 60-100% risk (Red) - Either method detects danger
+
+### Example Scenarios
+
+1. **Rapid Acceleration**: Tilt 2° → 8° (Z=4.5, but <15°)
+   - Z-Score: HIGH | Threshold: NORMAL → **Final: HIGH**
+   
+2. **Slow Creep**: Tilt gradually increases to 26°
+   - Z-Score: NORMAL | Threshold: HIGH → **Final: HIGH**
+   
+3. **Normal Operation**: Stable readings within limits
+   - Z-Score: NORMAL | Threshold: NORMAL → **Final: NORMAL**
 
 ## Troubleshooting
 

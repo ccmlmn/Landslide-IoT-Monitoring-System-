@@ -30,6 +30,11 @@ class handler(BaseHTTPRequestHandler):
             # Calculate risk
             risk_score, risk_state, z_scores = detector.update_and_score(rain, soil, tilt)
             
+            # Get threshold data and rolling means
+            threshold_status = detector.get_threshold_data(rain, soil, tilt)
+            thresholds = detector.get_thresholds()
+            rolling_mean = detector.get_rolling_mean()
+            
             # Prepare response
             response = {
                 "success": True,
@@ -37,7 +42,11 @@ class handler(BaseHTTPRequestHandler):
                     "riskScore": risk_score,
                     "riskState": risk_state,
                     "zScores": z_scores,
-                    "history": detector.history  # Return updated history
+                    "history": detector.history,  # Return updated history
+                    # New fields for hybrid approach
+                    "thresholdStatus": threshold_status,
+                    "thresholds": thresholds,
+                    "rollingMean": rolling_mean
                 }
             }
             

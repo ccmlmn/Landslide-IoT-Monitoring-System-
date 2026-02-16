@@ -101,7 +101,8 @@ void loop()
 
   // 2. Soil Moisture
   int soilRaw = analogRead(PIN_SOIL);
-  float soilValue = map(soilRaw, 4095, 0, 0, 100);
+  float soilValue = map(soilRaw, 2000, 2600, 100, 0);
+  soilValue = constrain(soilValue, 0, 100);
   if (soilValue < 0)
     soilValue = 0;
 

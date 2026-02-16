@@ -74,7 +74,11 @@ http.route({
             riskResult = {
               riskScore: riskData.data.riskScore,
               riskState: riskData.data.riskState,
-              zScores: riskData.data.zScores
+              zScores: riskData.data.zScores,
+              // New fields for hybrid approach
+              thresholdStatus: riskData.data.thresholdStatus,
+              thresholds: riskData.data.thresholds,
+              rollingMean: riskData.data.rollingMean
             };
           }
         }
@@ -110,6 +114,10 @@ http.route({
           zScoreRain: riskResult.zScores.rain,
           zScoreSoil: riskResult.zScores.soil,
           zScoreTilt: riskResult.zScores.tilt,
+          // New fields for hybrid approach
+          thresholdStatus: riskResult.thresholdStatus,
+          thresholds: riskResult.thresholds,
+          rollingMean: riskResult.rollingMean
         });
 
         // Mark as processed
