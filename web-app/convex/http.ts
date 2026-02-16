@@ -93,6 +93,7 @@ http.route({
             rainValue: rain_value,
             soilMoisture: soil_moisture,
             tiltValue: tilt_value,
+            history: history,
           });
         } catch (error) {
           console.error("TypeScript fallback failed:", error);

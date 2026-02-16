@@ -1,5 +1,4 @@
 import { action } from "./_generated/server";
-import { api } from "./_generated/api";
 import { v } from "convex/values";
 
 /**
@@ -7,8 +6,40 @@ import { v } from "convex/values";
  * This is a fallback in case Python serverless function is unavailable
  */
 
+// Type definitions
+interface SensorReading {
+  rainValue: number;
+  soilMoisture: number;
+  tiltValue: number;
+}
+
+interface ThresholdConfig {
+  warning: number;
+  danger: number;
+  unit: string;
+}
+
+interface ThresholdStatus {
+  status: string;
+  level: string;
+  message: string;
+}
+
+interface RiskResult {
+  riskScore: number;
+  riskState: string;
+  zScores: { rain: number; soil: number; tilt: number };
+  thresholdStatus: {
+    rain: ThresholdStatus;
+    soil: ThresholdStatus;
+    tilt: ThresholdStatus;
+  };
+  thresholds: typeof THRESHOLDS;
+  rollingMean: { rain: number; soil: number; tilt: number };
+}
+
 // Define threshold values (same as Python version)
-const THRESHOLDS = {
+const THRESHOLDS: Record<'tilt' | 'soil' | 'rain', ThresholdConfig> = {
   tilt: { warning: 15.0, danger: 25.0, unit: '°' },
   soil: { warning: 70.0, danger: 85.0, unit: '%' },
   rain: { warning: 50.0, danger: 75.0, unit: '' }
@@ -18,7 +49,7 @@ const THRESHOLDS = {
 const checkThresholdStatus = (
   sensorType: 'tilt' | 'soil' | 'rain',
   value: number
-): { status: string; level: string; message: string } => {
+): ThresholdStatus => {
   const threshold = THRESHOLDS[sensorType];
   
   if (value >= threshold.danger) {
@@ -42,18 +73,38 @@ const checkThresholdStatus = (
   }
 };
 
+// Helper function to calculate Z-score
+const calculateZScore = (current: number, values: number[]): number => {
+  const n = values.length;
+  const mean = values.reduce((sum: number, val: number) => sum + val, 0) / n;
+  const variance = values.reduce((sum: number, val: number) => sum + Math.pow(val - mean, 2), 0) / n;
+  const stdDev = Math.sqrt(variance);
+  
+  // Avoid division by zero
+  if (stdDev === 0) return 0;
+  
+  return (current - mean) / stdDev;
+};
+
 export const calculateRisk = action({
   args: {
     rainValue: v.float64(),
     soilMoisture: v.float64(),
     tiltValue: v.float64(),
+    history: v.optional(v.object({
+      rain: v.array(v.float64()),
+      soil: v.array(v.float64()),
+      tilt: v.array(v.float64())
+    }))
   },
-  handler: async (ctx, args) => {
-    // Fetch last 20 readings for historical context
-    const recentData = await ctx.runQuery(api.sensorData.getLatestResults, { limit: 20 });
+  handler: async (ctx, args): Promise<RiskResult> => {
+    // Use provided history or create empty arrays
+    const rainHistory: number[] = args.history?.rain ?? [];
+    const soilHistory: number[] = args.history?.soil ?? [];
+    const tiltHistory: number[] = args.history?.tilt ?? [];
     
     // Need at least 5 data points to calculate meaningful statistics
-    if (recentData.length < 5) {
+    if (rainHistory.length < 5) {
       return {
         riskScore: 0,
         riskState: "Initializing",
@@ -68,29 +119,11 @@ export const calculateRisk = action({
       };
     }
 
-    // Helper function to calculate Z-score
-    const calculateZScore = (current: number, values: number[]): number => {
-      const n = values.length;
-      const mean = values.reduce((sum, val) => sum + val, 0) / n;
-      const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / n;
-      const stdDev = Math.sqrt(variance);
-      
-      // Avoid division by zero
-      if (stdDev === 0) return 0;
-      
-      return (current - mean) / stdDev;
-    };
-
-    // Extract historical values
-    const rainHistory = recentData.map(d => d.rainValue);
-    const soilHistory = recentData.map(d => d.soilMoisture);
-    const tiltHistory = recentData.map(d => d.tiltValue);
-
     // Calculate rolling means
     const rollingMean = {
-      rain: rainHistory.reduce((sum, val) => sum + val, 0) / rainHistory.length,
-      soil: soilHistory.reduce((sum, val) => sum + val, 0) / soilHistory.length,
-      tilt: tiltHistory.reduce((sum, val) => sum + val, 0) / tiltHistory.length
+      rain: rainHistory.reduce((sum: number, val: number) => sum + val, 0) / rainHistory.length,
+      soil: soilHistory.reduce((sum: number, val: number) => sum + val, 0) / soilHistory.length,
+      tilt: tiltHistory.reduce((sum: number, val: number) => sum + val, 0) / tiltHistory.length
     };
 
     // === METHOD 1: Statistical Z-Scores ===
