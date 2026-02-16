@@ -13,7 +13,9 @@ ESP32 (Sensors) → Convex (HTTP Endpoint) → Database
                                               ↓
                                     Convex (Anomaly Results)
                                               ↓
-                                    Next.js Dashboard (Real-time Charts)
+                                    Next.js Dashboard (Multi-page App)
+                                              ↓
+                                    Real-time Charts & Navigation
 ```
 
 ## Hardware Components
@@ -118,9 +120,11 @@ venv\Scripts\activate  # On Windows
 pip install -r requirements.txt
 ```
 
+Note: The project also includes a `pyproject.toml` file for modern Python dependency management with additional packages like Flask (for future API endpoints).
+
 ### 6. Run the System
 
-You'll need 3 terminal windows:
+You'll need 2 terminal windows:
 
 #### Terminal 1: Convex Dev Server
 
@@ -129,14 +133,7 @@ cd web-app
 npx convex dev
 ```
 
-#### Terminal 2: Python Backend
-
-```bash
-cd backend
-python app.py
-```
-
-#### Terminal 3: Next.js Dashboard
+#### Terminal 2: Next.js Dashboard
 
 ```bash
 cd web-app
@@ -145,7 +142,7 @@ npm run dev
 
 ### 7. Test the System (If no hardware build yet)
 
-Open a 4th terminal and send test sensor data:
+Open a 3rd terminal and send test sensor data:
 This simulates the ESP32 sending sensor data to Convex at regular intervals.
 
 ```bash
@@ -182,7 +179,12 @@ Upload to ESP32 using Arduino IDE:
 
 1. Open http://localhost:3000
 2. Sign in with Clerk
-3. See real-time sensor data and risk analysis with interactive charts
+3. Navigate through multiple pages:
+   - **Overview**: Main dashboard with real-time sensor data and risk analysis
+   - **Live Monitoring**: Dedicated live sensor monitoring page (coming soon)
+   - **Historical Trends**: Analyze sensor data over time (coming soon)
+   - **Alerts & Logs**: System alerts and event logs (coming soon)
+   - **Settings**: System configuration and preferences (coming soon)
 
 ## Project Structure
 
@@ -197,27 +199,37 @@ landslide-iot-system/
 │   └── .env
 ├── web-app/
 │   ├── app/
-│   │   ├── layout.tsx         # App layout with Clerk/Convex providers
-│   │   ├── page.tsx           # Main dashboard page
-│   │   └── globals.css        # Global styles
+│   │   ├── layout.tsx              # Root layout with Clerk/Convex providers
+│   │   ├── page.tsx                # Main dashboard (Overview)
+│   │   ├── globals.css             # Global styles
+│   │   ├── live-monitoring/
+│   │   │   └── page.tsx            # Live monitoring page
+│   │   ├── historical-trends/
+│   │   │   └── page.tsx            # Historical trends page
+│   │   ├── alerts-logs/
+│   │   │   └── page.tsx            # Alerts & logs page
+│   │   └── settings/
+│   │       └── page.tsx            # Settings page
 │   ├── components/
-│   │   ├── Dashboard.tsx      # Real-time dashboard with charts
-│   │   ├── Providers.tsx      # Clerk + Convex setup
+│   │   ├── AppLayout.tsx           # Shared layout with sidebar & header
+│   │   ├── Dashboard.tsx           # Real-time dashboard with charts
+│   │   ├── Sidebar.tsx             # Navigation sidebar
+│   │   ├── Providers.tsx           # Clerk + Convex setup
 │   │   └── ui/
-│   │       └── card.tsx       # Reusable card component
+│   │       └── card.tsx            # Reusable card component
 │   ├── convex/
-│   │   ├── schema.ts          # Database schema (sensorData, anomalyResults)
-│   │   ├── sensorData.ts      # CRUD operations for sensor data
-│   │   ├── anomalyResults.ts  # CRUD operations for risk analysis
-│   │   └── http.ts            # ESP32 HTTP endpoint
+│   │   ├── schema.ts               # Database schema (sensorData, anomalyResults)
+│   │   ├── sensorData.ts           # CRUD operations for sensor data
+│   │   ├── anomalyResults.ts       # CRUD operations for risk analysis
+│   │   └── http.ts                 # ESP32 HTTP endpoint
 │   ├── lib/
-│   │   └── utils.ts           # Utility functions (cn helper)
-│   ├── middleware.ts          # Clerk auth middleware
-│   ├── package.json           # Node.js dependencies
+│   │   └── utils.ts                # Utility functions (cn helper)
+│   ├── middleware.ts               # Clerk auth middleware
+│   ├── package.json                # Node.js dependencies
 │   └── .env.local
 ├── firmware/
-│   └── slope_sentry.ino       # ESP32 code with sensor integration
-├── pyproject.toml             # Python project configuration
+│   └── slope_sentry.ino            # ESP32 code with sensor integration
+├── pyproject.toml                  # Python project configuration
 └── README.md
 ```
 
@@ -301,6 +313,8 @@ landslide-iot-system/
 - Live sensor data updates every 5 seconds
 - Instant risk level changes with color-coded status indicators
 - WebSocket-based real-time updates via Convex
+- Multi-page navigation with Overview, Live Monitoring, Historical Trends, Alerts & Logs, and Settings
+- Mobile-responsive sidebar with hamburger menu
 
 ### Intelligent Risk Analysis
 
@@ -312,11 +326,15 @@ landslide-iot-system/
 
 ### Interactive Dashboard
 
-- Real-time charts showing sensor trends over time
-- Historical data visualization with Recharts
-- Recent activity feed with timestamps
-- Color-coded risk status (Green/Yellow/Red)
-- Responsive design for mobile and desktop
+- **Multi-page Application**: Navigate between Overview, Live Monitoring, Historical Trends, Alerts & Logs, and Settings
+- **Responsive Layout**: Mobile-first design with collapsible sidebar and hamburger menu
+- **Real-time Charts**: Interactive sensor trends visualization with Recharts
+- **Header Bar**: Shows online status, last updated time, dark mode toggle, and user profile
+- **Navigation Sidebar**: Easy access to all sections with active page highlighting
+- **Historical Data**: Visualization of sensor readings over time
+- **Recent Activity Feed**: Timestamped sensor readings
+- **Color-coded Risk Status**: Green (Low), Yellow (Moderate), Red (High)
+- **Loading States**: Skeleton screens for better UX during data fetching
 
 ### Hardware Integration
 
@@ -328,10 +346,11 @@ landslide-iot-system/
 
 ### Security & Authentication
 
-- Clerk-based user authentication
+- Clerk-based user authentication with UserButton component
 - Protected routes with middleware
 - Secure environment variable management
 - HTTPS communication
+- Session management across all pages
 
 ## Z-Score Algorithm Details
 
@@ -379,9 +398,12 @@ The system uses a statistical anomaly detection approach:
 
 ## Future Improvements
 
-- [ ] Enhanced UI design with more visualizations
+- [ ] Complete Live Monitoring page with real-time sensor visualization
+- [ ] Implement Historical Trends page with date range selection and charts
+- [ ] Build Alerts & Logs page with event history and filtering
+- [ ] Develop Settings page for system configuration
+- [ ] Add dark mode functionality (UI toggle already present)
 - [ ] SMS/Email alert notifications
-- [ ] Admin panel for system configuration
 - [ ] Weather API integration for correlation
 - [ ] Customizable risk thresholds
 - [ ] Geolocation mapping with risk zones
