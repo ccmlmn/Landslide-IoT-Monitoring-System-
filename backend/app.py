@@ -45,12 +45,19 @@ def main():
                         sensor_id = data.get("_id")
                         timestamp = data.get("timestamp")
                         
-                        # Calculate risk using Z-score
+                        # Calculate risk using hybrid approach (Z-score + Thresholds)
                         risk_score, risk_state, z_scores = detector.update_and_score(rain, soil, tilt)
                         
-                        print(f"  Processing {sensor_id[:8]}... -> Risk: {risk_state} ({risk_score}%)")
+                        # Get threshold data
+                        threshold_status = detector.get_threshold_data(rain, soil, tilt)
+                        thresholds = detector.get_thresholds()
+                        rolling_mean = detector.get_rolling_mean()
                         
-                        # Prepare result data
+                        print(f"  Processing {sensor_id[:8]}... -> Risk: {risk_state} ({risk_score}%)")
+                        print(f"    Z-Scores: Rain={z_scores['rain']:.2f}, Soil={z_scores['soil']:.2f}, Tilt={z_scores['tilt']:.2f}")
+                        print(f"    Thresholds: Rain={threshold_status['rain']['level']}, Soil={threshold_status['soil']['level']}, Tilt={threshold_status['tilt']['level']}")
+                        
+                        # Prepare result data with enhanced information
                         result_data = {
                             "sensorDataId": sensor_id,
                             "timestamp": timestamp,
@@ -62,6 +69,14 @@ def main():
                             "zScoreRain": float(z_scores["rain"]),
                             "zScoreSoil": float(z_scores["soil"]),
                             "zScoreTilt": float(z_scores["tilt"]),
+                            # New fields for hybrid approach
+                            "thresholdStatus": {
+                                "rain": threshold_status['rain'],
+                                "soil": threshold_status['soil'],
+                                "tilt": threshold_status['tilt']
+                            },
+                            "thresholds": thresholds,
+                            "rollingMean": rolling_mean
                         }
                         
                         # Save result to Convex

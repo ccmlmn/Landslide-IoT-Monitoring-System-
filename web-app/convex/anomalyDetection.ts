@@ -1,84 +1,208 @@
 import { action } from "./_generated/server";
-import { api } from "./_generated/api";
 import { v } from "convex/values";
 
 /**
- * TypeScript implementation of Z-score based anomaly detection
+ * TypeScript implementation of hybrid anomaly detection (Z-score + Fixed Thresholds)
  * This is a fallback in case Python serverless function is unavailable
  */
+
+// Type definitions
+interface SensorReading {
+  rainValue: number;
+  soilMoisture: number;
+  tiltValue: number;
+}
+
+interface ThresholdConfig {
+  warning: number;
+  danger: number;
+  unit: string;
+}
+
+interface ThresholdStatus {
+  status: string;
+  level: string;
+  message: string;
+}
+
+interface RiskResult {
+  riskScore: number;
+  riskState: string;
+  zScores: { rain: number; soil: number; tilt: number };
+  thresholdStatus: {
+    rain: ThresholdStatus;
+    soil: ThresholdStatus;
+    tilt: ThresholdStatus;
+  };
+  thresholds: typeof THRESHOLDS;
+  rollingMean: { rain: number; soil: number; tilt: number };
+}
+
+// Define threshold values (same as Python version)
+const THRESHOLDS: Record<'tilt' | 'soil' | 'rain', ThresholdConfig> = {
+  tilt: { warning: 15.0, danger: 25.0, unit: '°' },
+  soil: { warning: 70.0, danger: 85.0, unit: '%' },
+  rain: { warning: 50.0, danger: 75.0, unit: '' }
+};
+
+// Helper function to check threshold status
+const checkThresholdStatus = (
+  sensorType: 'tilt' | 'soil' | 'rain',
+  value: number
+): ThresholdStatus => {
+  const threshold = THRESHOLDS[sensorType];
+  
+  if (value >= threshold.danger) {
+    return {
+      status: 'danger',
+      level: 'High',
+      message: `Exceeds danger threshold (${threshold.danger}${threshold.unit})`
+    };
+  } else if (value >= threshold.warning) {
+    return {
+      status: 'warning',
+      level: 'Moderate',
+      message: `Exceeds warning threshold (${threshold.warning}${threshold.unit})`
+    };
+  } else {
+    return {
+      status: 'normal',
+      level: 'Low',
+      message: 'Within normal range'
+    };
+  }
+};
+
+// Helper function to calculate Z-score
+const calculateZScore = (current: number, values: number[]): number => {
+  const n = values.length;
+  const mean = values.reduce((sum: number, val: number) => sum + val, 0) / n;
+  const variance = values.reduce((sum: number, val: number) => sum + Math.pow(val - mean, 2), 0) / n;
+  const stdDev = Math.sqrt(variance);
+  
+  // Avoid division by zero
+  if (stdDev === 0) return 0;
+  
+  return (current - mean) / stdDev;
+};
+
 export const calculateRisk = action({
   args: {
     rainValue: v.float64(),
     soilMoisture: v.float64(),
     tiltValue: v.float64(),
+    history: v.optional(v.object({
+      rain: v.array(v.float64()),
+      soil: v.array(v.float64()),
+      tilt: v.array(v.float64())
+    }))
   },
-  handler: async (ctx, args) => {
-    // Fetch last 20 readings for historical context
-    const recentData = await ctx.runQuery(api.sensorData.getLatestResults, { limit: 20 });
+  handler: async (ctx, args): Promise<RiskResult> => {
+    // Use provided history or create empty arrays
+    const rainHistory: number[] = args.history?.rain ?? [];
+    const soilHistory: number[] = args.history?.soil ?? [];
+    const tiltHistory: number[] = args.history?.tilt ?? [];
     
     // Need at least 5 data points to calculate meaningful statistics
-    if (recentData.length < 5) {
+    if (rainHistory.length < 5) {
       return {
         riskScore: 0,
         riskState: "Initializing",
-        zScores: { rain: 0, soil: 0, tilt: 0 }
+        zScores: { rain: 0, soil: 0, tilt: 0 },
+        thresholdStatus: {
+          rain: checkThresholdStatus('rain', args.rainValue),
+          soil: checkThresholdStatus('soil', args.soilMoisture),
+          tilt: checkThresholdStatus('tilt', args.tiltValue)
+        },
+        thresholds: THRESHOLDS,
+        rollingMean: { rain: 0, soil: 0, tilt: 0 }
       };
     }
 
-    // Helper function to calculate Z-score
-    const calculateZScore = (current: number, values: number[]): number => {
-      const n = values.length;
-      const mean = values.reduce((sum, val) => sum + val, 0) / n;
-      const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / n;
-      const stdDev = Math.sqrt(variance);
-      
-      // Avoid division by zero
-      if (stdDev === 0) return 0;
-      
-      return (current - mean) / stdDev;
+    // Calculate rolling means
+    const rollingMean = {
+      rain: rainHistory.reduce((sum: number, val: number) => sum + val, 0) / rainHistory.length,
+      soil: soilHistory.reduce((sum: number, val: number) => sum + val, 0) / soilHistory.length,
+      tilt: tiltHistory.reduce((sum: number, val: number) => sum + val, 0) / tiltHistory.length
     };
 
-    // Extract historical values
-    const rainHistory = recentData.map(d => d.rainValue);
-    const soilHistory = recentData.map(d => d.soilMoisture);
-    const tiltHistory = recentData.map(d => d.tiltValue);
-
-    // Calculate Z-scores for each sensor
+    // === METHOD 1: Statistical Z-Scores ===
     const zRain = calculateZScore(args.rainValue, rainHistory);
     const zSoil = calculateZScore(args.soilMoisture, soilHistory);
     const zTilt = calculateZScore(args.tiltValue, tiltHistory);
 
-    // Calculate risk score using Z-scores
-    // Take absolute values since we care about deviation in either direction
+    // Calculate statistical risk using Z-scores
     const avgZ = (Math.abs(zRain) + Math.abs(zSoil) + Math.abs(zTilt)) / 3;
-    
-    // Map Z-score to percentage (Z=3 means 3 standard deviations = high risk)
-    // Assumption: Z=3 (3 sigma) is 100% risk
-    let riskScore = (avgZ / 3) * 100;
+    let statisticalRisk = (avgZ / 3) * 100;
 
     // Critical thresholds: if tilt or soil moisture is extremely abnormal, set max risk
     if (Math.abs(zTilt) > 3 || Math.abs(zSoil) > 3) {
-      riskScore = 100;
+      statisticalRisk = 100;
     }
 
-    // Clamp between 0 and 100
-    riskScore = Math.max(0, Math.min(100, riskScore));
+    statisticalRisk = Math.max(0, Math.min(100, statisticalRisk));
 
-    // Determine risk state based on score
-    let riskState = "Low";
-    if (riskScore > 60) {
-      riskState = "High";
-    } else if (riskScore > 30) {
-      riskState = "Moderate";
+    // Determine statistical risk state
+    let statisticalState = "Low";
+    if (statisticalRisk > 60) {
+      statisticalState = "High";
+    } else if (statisticalRisk > 30) {
+      statisticalState = "Moderate";
     }
+
+    // === METHOD 2: Fixed Threshold Checking ===
+    const thresholdStatus = {
+      rain: checkThresholdStatus('rain', args.rainValue),
+      soil: checkThresholdStatus('soil', args.soilMoisture),
+      tilt: checkThresholdStatus('tilt', args.tiltValue)
+    };
+
+    // Count danger and warning flags
+    const dangerCount = Object.values(thresholdStatus).filter(s => s.status === 'danger').length;
+    const warningCount = Object.values(thresholdStatus).filter(s => s.status === 'warning').length;
+
+    // Determine threshold-based risk
+    let thresholdRisk = 0;
+    let thresholdState = "Low";
+    
+    if (dangerCount >= 1) {
+      thresholdState = "High";
+      thresholdRisk = 100;
+    } else if (warningCount >= 2) {
+      thresholdState = "High";
+      thresholdRisk = 80;
+    } else if (warningCount >= 1) {
+      thresholdState = "Moderate";
+      thresholdRisk = 50;
+    }
+
+    // === HYBRID COMBINATION: Take the WORSE of both methods ===
+    const finalRisk = Math.max(statisticalRisk, thresholdRisk);
+
+    // Final state is the worse of the two
+    const riskStates = { Low: 0, Moderate: 1, High: 2 };
+    const finalStatePriority = Math.max(
+      riskStates[statisticalState as keyof typeof riskStates],
+      riskStates[thresholdState as keyof typeof riskStates]
+    );
+    const finalState = Object.keys(riskStates).find(
+      key => riskStates[key as keyof typeof riskStates] === finalStatePriority
+    ) as string;
 
     return {
-      riskScore: Math.round(riskScore * 100) / 100,
-      riskState,
+      riskScore: Math.round(finalRisk * 100) / 100,
+      riskState: finalState,
       zScores: {
         rain: Math.round(zRain * 10000) / 10000,
         soil: Math.round(zSoil * 10000) / 10000,
         tilt: Math.round(zTilt * 10000) / 10000,
+      },
+      thresholdStatus,
+      thresholds: THRESHOLDS,
+      rollingMean: {
+        rain: Math.round(rollingMean.rain * 100) / 100,
+        soil: Math.round(rollingMean.soil * 100) / 100,
+        tilt: Math.round(rollingMean.tilt * 100) / 100
       }
     };
   },
