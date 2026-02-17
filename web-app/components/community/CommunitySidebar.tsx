@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { LayoutDashboard, Activity, Mountain, X, Shield } from "lucide-react";
+import { LayoutDashboard, Activity, Mountain, X, Shield, FileText } from "lucide-react";
 
 const communityNavigation = [
   { name: "Overview", href: "/", icon: LayoutDashboard },
   { name: "Live Monitoring", href: "/live-monitoring", icon: Activity },
+  { name: "Report Issue", href: "/report", icon: FileText },
 ];
 
 interface CommunitySidebarProps {

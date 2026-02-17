@@ -11,6 +11,7 @@
 import type * as anomalyDetection from "../anomalyDetection.js";
 import type * as anomalyResults from "../anomalyResults.js";
 import type * as http from "../http.js";
+import type * as reports from "../reports.js";
 import type * as sensorData from "../sensorData.js";
 
 import type {
@@ -23,6 +24,7 @@ declare const fullApi: ApiFromModules<{
   anomalyDetection: typeof anomalyDetection;
   anomalyResults: typeof anomalyResults;
   http: typeof http;
+  reports: typeof reports;
   sensorData: typeof sensorData;
 }>;
 

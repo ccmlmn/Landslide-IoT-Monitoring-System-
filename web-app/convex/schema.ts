@@ -66,4 +66,19 @@ export default defineSchema({
     }))
   }).index("by_timestamp", ["timestamp"])
     .index("by_risk_state", ["riskState"]),
+
+  // Community reports
+  reports: defineTable({
+    timestamp: v.string(),
+    userName: v.string(),
+    userEmail: v.string(),
+    reportType: v.string(), // "Ground Crack", "Water Seepage", "Strange Sound", "Other"
+    description: v.string(),
+    location: v.optional(v.string()),
+    severity: v.string(), // "Low", "Medium", "High"
+    status: v.string(), // "Pending", "Reviewed", "Resolved"
+    adminNotes: v.optional(v.string()),
+  }).index("by_timestamp", ["timestamp"])
+    .index("by_status", ["status"])
+    .index("by_severity", ["severity"]),
 });

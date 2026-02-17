@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { LayoutDashboard, Activity, TrendingUp, AlertTriangle, Settings, Mountain, X } from "lucide-react";
+import { LayoutDashboard, Activity, TrendingUp, AlertTriangle, Settings, Mountain, X, FileText } from "lucide-react";
 
 const navigation = [
   { name: "Overview", href: "/", icon: LayoutDashboard },
   { name: "Live Monitoring", href: "/live-monitoring", icon: Activity },
   { name: "Alerts & Logs", href: "/alerts-logs", icon: AlertTriangle },
+  { name: "Reports Logs", href: "/reports-logs", icon: FileText },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
