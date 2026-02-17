@@ -266,6 +266,7 @@ export function Dashboard() {
                 />
               )}
               
+              {/* Risk % moved to the end */}
               <Line 
                 type="monotone" 
                 dataKey="risk" 

@@ -1,7 +1,6 @@
 "use client";
 
-import { ReactNode, useState } from "react";
-import { Sidebar } from "./Sidebar";
+import { ReactNode } from "react";
 import { UserButton } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -9,16 +8,17 @@ import { Wifi, Moon, Settings as SettingsIcon, Menu } from "lucide-react";
 
 interface AppLayoutProps {
   children: ReactNode;
+  sidebar: ReactNode;
+  onMenuClick?: () => void;
 }
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout({ children, sidebar, onMenuClick }: AppLayoutProps) {
   const latestResult = useQuery(api.sensorData.getLatestResult);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar - fixed overlay on mobile, part of layout on desktop */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {sidebar}
 
       {/* Main Content - full width on mobile, flex-1 on desktop */}
       <div className="w-full lg:flex-1 flex flex-col overflow-hidden">
@@ -29,7 +29,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             <div className="flex items-center gap-3">
               {/* Hamburger menu for mobile */}
               <button
-                onClick={() => setSidebarOpen(true)}
+                onClick={onMenuClick}
                 className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 aria-label="Open sidebar"
               >
