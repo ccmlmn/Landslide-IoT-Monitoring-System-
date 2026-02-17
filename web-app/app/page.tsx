@@ -86,8 +86,8 @@ export default function Home() {
                                         </div>
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-semibold mb-2">AI Anomaly Detection</h3>
-                                        <p className="text-green-100">Machine learning algorithms predict landslide risks before they occur</p>
+                                        <h3 className="text-lg font-semibold mb-2">Hybrid Anomaly Detection</h3>
+                                        <p className="text-green-100">Z-score Anomaly Detection combined with threshold-based detection</p>
                                     </div>
                                 </div>
 

@@ -183,7 +183,6 @@ Upload to ESP32 using Arduino IDE:
 3. Navigate through multiple pages:
    - **Overview**: Main dashboard with real-time sensor data and risk analysis
    - **Live Monitoring**: Dedicated live sensor monitoring page (coming soon)
-   - **Historical Trends**: Analyze sensor data over time (coming soon)
    - **Alerts & Logs**: System alerts and event logs (coming soon)
    - **Settings**: System configuration and preferences (coming soon)
 
@@ -205,8 +204,6 @@ landslide-iot-system/
 │   │   ├── globals.css             # Global styles
 │   │   ├── live-monitoring/
 │   │   │   └── page.tsx            # Live monitoring page
-│   │   ├── historical-trends/
-│   │   │   └── page.tsx            # Historical trends page
 │   │   ├── alerts-logs/
 │   │   │   └── page.tsx            # Alerts & logs page
 │   │   └── settings/
@@ -330,7 +327,7 @@ landslide-iot-system/
 - Live sensor data updates every 5 seconds
 - Instant risk level changes with color-coded status indicators
 - WebSocket-based real-time updates via Convex
-- Multi-page navigation with Overview, Live Monitoring, Historical Trends, Alerts & Logs, and Settings
+- Multi-page navigation with Overview, Live Monitoring, Alerts & Logs, and Settings
 - Mobile-responsive sidebar with hamburger menu
 
 ### Intelligent Risk Analysis
@@ -352,7 +349,6 @@ landslide-iot-system/
 - **Multi-page Application**:
   - **Overview**: Main dashboard with combined risk assessment
   - **Live Monitoring**: Detailed sensor analytics with threshold visualization
-  - **Historical Trends**: Time-series analysis (coming soon)
   - **Alerts & Logs**: Event history and notifications (coming soon)
   - **Settings**: System configuration (coming soon)
 - **Responsive Layout**: Mobile-first design with collapsible sidebar and hamburger menu
@@ -467,11 +463,8 @@ final_state = worse_of(statistical_state, threshold_state)
 
 ## Future Improvements
 
-- [ ] Complete Live Monitoring page with real-time sensor visualization
-- [ ] Implement Historical Trends page with date range selection and charts
 - [ ] Build Alerts & Logs page with event history and filtering
 - [ ] Develop Settings page for system configuration
-- [ ] Add dark mode functionality (UI toggle already present)
 - [ ] SMS/Email alert notifications
 - [ ] Weather API integration for correlation
 - [ ] Customizable risk thresholds

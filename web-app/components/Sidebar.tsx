@@ -8,7 +8,6 @@ import { LayoutDashboard, Activity, TrendingUp, AlertTriangle, Settings, Mountai
 const navigation = [
   { name: "Overview", href: "/", icon: LayoutDashboard },
   { name: "Live Monitoring", href: "/live-monitoring", icon: Activity },
-  { name: "Historical Trends", href: "/historical-trends", icon: TrendingUp },
   { name: "Alerts & Logs", href: "/alerts-logs", icon: AlertTriangle },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
