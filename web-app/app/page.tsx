@@ -32,7 +32,7 @@ function DashboardLayout() {
                     {isAdmin ? "Real-time landslide risk monitoring - Admin Dashboard" : "Real-time landslide risk monitoring - Community View"}
                 </p>
             </div>
-            <Dashboard />
+            <Dashboard showZScore={isAdmin} />
         </AppLayout>
     );
 }

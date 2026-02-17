@@ -483,87 +483,89 @@ export default function LiveMonitoring() {
           </CardContent>
         </Card>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Zap className="h-4 w-4" />
-                Combined Risk Score
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold">{latestData.riskScore.toFixed(1)}</span>
-                  <span className="text-lg text-gray-500">%</span>
+        {/* Summary Cards - Admin only */}
+        {isAdmin && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  Combined Risk Score
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold">{latestData.riskScore.toFixed(1)}</span>
+                    <span className="text-lg text-gray-500">%</span>
+                  </div>
+                  <div className={`text-sm font-medium ${
+                    latestData.riskState === 'High' ? 'text-red-600' :
+                    latestData.riskState === 'Moderate' ? 'text-yellow-600' :
+                    'text-green-600'
+                  }`}>
+                    {latestData.riskState} Risk
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    Hybrid approach: Z-Score + Thresholds
+                  </div>
                 </div>
-                <div className={`text-sm font-medium ${
-                  latestData.riskState === 'High' ? 'text-red-600' :
-                  latestData.riskState === 'Moderate' ? 'text-yellow-600' :
-                  'text-green-600'
-                }`}>
-                  {latestData.riskState} Risk
-                </div>
-                <div className="text-xs text-gray-600">
-                  Hybrid approach: Z-Score + Thresholds
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Activity className="h-4 w-4" />
-                Max Z-Score
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="text-3xl font-bold">
-                  {Math.max(
-                    Math.abs(latestData.zScoreRain),
-                    Math.abs(latestData.zScoreSoil),
-                    Math.abs(latestData.zScoreTilt)
-                  ).toFixed(2)}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  Max Z-Score
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="text-3xl font-bold">
+                    {Math.max(
+                      Math.abs(latestData.zScoreRain),
+                      Math.abs(latestData.zScoreSoil),
+                      Math.abs(latestData.zScoreTilt)
+                    ).toFixed(2)}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {Math.max(Math.abs(latestData.zScoreRain), Math.abs(latestData.zScoreSoil), Math.abs(latestData.zScoreTilt)) >= 3 
+                      ? '🚨 Critical anomaly detected' 
+                      : Math.max(Math.abs(latestData.zScoreRain), Math.abs(latestData.zScoreSoil), Math.abs(latestData.zScoreTilt)) >= 2 
+                      ? '⚠️ Moderate anomaly' 
+                      : '✅ Normal'}
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">
-                  {Math.max(Math.abs(latestData.zScoreRain), Math.abs(latestData.zScoreSoil), Math.abs(latestData.zScoreTilt)) >= 3 
-                    ? '🚨 Critical anomaly detected' 
-                    : Math.max(Math.abs(latestData.zScoreRain), Math.abs(latestData.zScoreSoil), Math.abs(latestData.zScoreTilt)) >= 2 
-                    ? '⚠️ Moderate anomaly' 
-                    : '✅ Normal'}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">Last Updated</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="text-xl font-bold">
-                  {new Date(latestData.timestamp).toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: true 
-                  })}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Last Updated</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="text-xl font-bold">
+                    {new Date(latestData.timestamp).toLocaleTimeString('en-US', { 
+                      hour: '2-digit', 
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: true 
+                    })}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {new Date(latestData.timestamp).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">
-                  {new Date(latestData.timestamp).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </AppLayout>
   );
