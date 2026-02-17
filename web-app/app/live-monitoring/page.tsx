@@ -1,6 +1,8 @@
 "use client";
 
 import { AppLayout } from "@/components/AppLayout";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { CommunitySidebar } from "@/components/community/CommunitySidebar";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,15 +20,30 @@ import {
   Area,
   ComposedChart
 } from "recharts";
+import { useUser } from "@clerk/nextjs";
+import { useState } from "react";
 
 export default function LiveMonitoring() {
   const latestData = useQuery(api.sensorData.getLatestResult);
   const recentData = useQuery(api.sensorData.getLatestResults, { limit: 30 });
+  const { user } = useUser();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // Get user role from Clerk metadata, default to "community"
+  const userRole = (user?.publicMetadata?.role as string) || "community";
+  const isAdmin = userRole === "admin";
+
+  // Choose the appropriate sidebar based on role
+  const sidebar = isAdmin ? (
+    <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+  ) : (
+    <CommunitySidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+  );
 
   // Loading state
   if (!latestData) {
     return (
-      <AppLayout>
+      <AppLayout sidebar={sidebar} onMenuClick={() => setSidebarOpen(true)}>
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
@@ -110,7 +127,7 @@ export default function LiveMonitoring() {
   };
 
   return (
-    <AppLayout>
+    <AppLayout sidebar={sidebar} onMenuClick={() => setSidebarOpen(true)}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -249,17 +266,6 @@ export default function LiveMonitoring() {
                   label={{ value: `Warning (${thresholds.tilt.warning}°)`, position: 'right', fill: '#f59e0b', fontSize: 12 }}
                 />
                 
-                {/* Rolling mean as area */}
-                <Area 
-                  type="monotone" 
-                  dataKey="tiltMean" 
-                  fill="#93c5fd" 
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  fillOpacity={0.2}
-                  name="Rolling Mean"
-                />
-                
                 {/* Current tilt */}
                 <Line 
                   type="monotone" 
@@ -269,6 +275,19 @@ export default function LiveMonitoring() {
                   dot={{ r: 3 }}
                   name="Current Tilt"
                 />
+                
+                {/* Rolling mean as area - Admin only */}
+                {isAdmin && (
+                  <Area 
+                    type="monotone" 
+                    dataKey="tiltMean" 
+                    fill="#93c5fd" 
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    fillOpacity={0.2}
+                    name="Rolling Mean"
+                  />
+                )}
                 
                 {/* Dummy lines for legend - Warning */}
                 <Line 
@@ -332,16 +351,6 @@ export default function LiveMonitoring() {
                   label={{ value: `Warning (${thresholds.soil.warning}%)`, position: 'right', fill: '#f59e0b', fontSize: 12 }}
                 />
                 
-                <Area 
-                  type="monotone" 
-                  dataKey="soilMean" 
-                  fill="#86efac" 
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  fillOpacity={0.2}
-                  name="Rolling Mean"
-                />
-                
                 <Line 
                   type="monotone" 
                   dataKey="soilMoisture" 
@@ -350,6 +359,19 @@ export default function LiveMonitoring() {
                   dot={{ r: 3 }}
                   name="Soil Moisture"
                 />
+                
+                {/* Rolling mean as area - Admin only */}
+                {isAdmin && (
+                  <Area 
+                    type="monotone" 
+                    dataKey="soilMean" 
+                    fill="#86efac" 
+                    stroke="#10b981"
+                    strokeWidth={2}
+                    fillOpacity={0.2}
+                    name="Rolling Mean"
+                  />
+                )}
                 
                 {/* Dummy lines for legend - Warning */}
                 <Line 
@@ -413,16 +435,6 @@ export default function LiveMonitoring() {
                   label={{ value: `Warning (${thresholds.rain.warning})`, position: 'right', fill: '#f59e0b', fontSize: 12 }}
                 />
                 
-                <Area 
-                  type="monotone" 
-                  dataKey="rainMean" 
-                  fill="#c084fc" 
-                  stroke="#9333ea"
-                  strokeWidth={2}
-                  fillOpacity={0.2}
-                  name="Rolling Mean"
-                />
-                
                 <Line 
                   type="monotone" 
                   dataKey="rain" 
@@ -431,6 +443,19 @@ export default function LiveMonitoring() {
                   dot={{ r: 3 }}
                   name="Rain Intensity"
                 />
+                
+                {/* Rolling mean as area - Admin only */}
+                {isAdmin && (
+                  <Area 
+                    type="monotone" 
+                    dataKey="rainMean" 
+                    fill="#c084fc" 
+                    stroke="#9333ea"
+                    strokeWidth={2}
+                    fillOpacity={0.2}
+                    name="Rolling Mean"
+                  />
+                )}
                 
                 {/* Dummy lines for legend - Warning */}
                 <Line 
@@ -458,87 +483,89 @@ export default function LiveMonitoring() {
           </CardContent>
         </Card>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Zap className="h-4 w-4" />
-                Combined Risk Score
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold">{latestData.riskScore.toFixed(1)}</span>
-                  <span className="text-lg text-gray-500">%</span>
+        {/* Summary Cards - Admin only */}
+        {isAdmin && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  Combined Risk Score
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold">{latestData.riskScore.toFixed(1)}</span>
+                    <span className="text-lg text-gray-500">%</span>
+                  </div>
+                  <div className={`text-sm font-medium ${
+                    latestData.riskState === 'High' ? 'text-red-600' :
+                    latestData.riskState === 'Moderate' ? 'text-yellow-600' :
+                    'text-green-600'
+                  }`}>
+                    {latestData.riskState} Risk
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    Hybrid approach: Z-Score + Thresholds
+                  </div>
                 </div>
-                <div className={`text-sm font-medium ${
-                  latestData.riskState === 'High' ? 'text-red-600' :
-                  latestData.riskState === 'Moderate' ? 'text-yellow-600' :
-                  'text-green-600'
-                }`}>
-                  {latestData.riskState} Risk
-                </div>
-                <div className="text-xs text-gray-600">
-                  Hybrid approach: Z-Score + Thresholds
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Activity className="h-4 w-4" />
-                Max Z-Score
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="text-3xl font-bold">
-                  {Math.max(
-                    Math.abs(latestData.zScoreRain),
-                    Math.abs(latestData.zScoreSoil),
-                    Math.abs(latestData.zScoreTilt)
-                  ).toFixed(2)}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  Max Z-Score
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="text-3xl font-bold">
+                    {Math.max(
+                      Math.abs(latestData.zScoreRain),
+                      Math.abs(latestData.zScoreSoil),
+                      Math.abs(latestData.zScoreTilt)
+                    ).toFixed(2)}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {Math.max(Math.abs(latestData.zScoreRain), Math.abs(latestData.zScoreSoil), Math.abs(latestData.zScoreTilt)) >= 3 
+                      ? '🚨 Critical anomaly detected' 
+                      : Math.max(Math.abs(latestData.zScoreRain), Math.abs(latestData.zScoreSoil), Math.abs(latestData.zScoreTilt)) >= 2 
+                      ? '⚠️ Moderate anomaly' 
+                      : '✅ Normal'}
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">
-                  {Math.max(Math.abs(latestData.zScoreRain), Math.abs(latestData.zScoreSoil), Math.abs(latestData.zScoreTilt)) >= 3 
-                    ? '🚨 Critical anomaly detected' 
-                    : Math.max(Math.abs(latestData.zScoreRain), Math.abs(latestData.zScoreSoil), Math.abs(latestData.zScoreTilt)) >= 2 
-                    ? '⚠️ Moderate anomaly' 
-                    : '✅ Normal'}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">Last Updated</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="text-xl font-bold">
-                  {new Date(latestData.timestamp).toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: true 
-                  })}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Last Updated</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="text-xl font-bold">
+                    {new Date(latestData.timestamp).toLocaleTimeString('en-US', { 
+                      hour: '2-digit', 
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: true 
+                    })}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {new Date(latestData.timestamp).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </div>
                 </div>
-                <div className="text-xs text-gray-600">
-                  {new Date(latestData.timestamp).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </AppLayout>
   );

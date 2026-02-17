@@ -66,7 +66,11 @@ function DashboardSkeleton() {
   );
 }
 
-export function Dashboard() {
+interface DashboardProps {
+  showZScore?: boolean;
+}
+
+export function Dashboard({ showZScore = true }: DashboardProps) {
   const latestResult = useQuery(api.sensorData.getLatestResult);
   const history = useQuery(api.sensorData.getLatestResults, { limit: 10 });
   const [chartFilter, setChartFilter] = useState<'all' | 'rain' | 'soil' | 'tilt'>('all');
@@ -127,7 +131,9 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{latestResult.rainValue.toFixed(2)}</div>
-            <p className="text-xs text-gray-600">Z-Score: {latestResult.zScoreRain.toFixed(2)}</p>
+            {showZScore && (
+              <p className="text-xs text-gray-600">Z-Score: {latestResult.zScoreRain.toFixed(2)}</p>
+            )}
           </CardContent>
         </Card>
 
@@ -138,7 +144,9 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{latestResult.soilMoisture.toFixed(2)}</div>
-            <p className="text-xs text-gray-600">Z-Score: {latestResult.zScoreSoil.toFixed(2)}</p>
+            {showZScore && (
+              <p className="text-xs text-gray-600">Z-Score: {latestResult.zScoreSoil.toFixed(2)}</p>
+            )}
           </CardContent>
         </Card>
 
@@ -149,7 +157,9 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{latestResult.tiltValue.toFixed(2)}</div>
-            <p className="text-xs text-gray-600">Z-Score: {latestResult.zScoreTilt.toFixed(2)}</p>
+            {showZScore && (
+              <p className="text-xs text-gray-600">Z-Score: {latestResult.zScoreTilt.toFixed(2)}</p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -266,6 +276,7 @@ export function Dashboard() {
                 />
               )}
               
+              {/* Risk % moved to the end */}
               <Line 
                 type="monotone" 
                 dataKey="risk" 

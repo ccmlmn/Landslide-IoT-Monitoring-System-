@@ -1,19 +1,38 @@
 'use client';
 
-import { SignedIn, SignedOut, UserButton, useAuth } from "@clerk/nextjs";
+import { SignedIn, SignedOut, UserButton, useAuth, useUser } from "@clerk/nextjs";
 import { SignIn } from "@clerk/nextjs";
 import { Dashboard } from "@/components/Dashboard";
 import { AppLayout } from "@/components/AppLayout";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { CommunitySidebar } from "@/components/community/CommunitySidebar";
 import { AlertTriangle, Radio, Bell, Zap, Mountain } from "lucide-react";
+import { useState } from "react";
 
 function DashboardLayout() {
+    const { user } = useUser();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    
+    // Get user role from Clerk metadata, default to "community"
+    const userRole = (user?.publicMetadata?.role as string) || "community";
+    const isAdmin = userRole === "admin";
+
+    // Choose the appropriate sidebar based on role
+    const sidebar = isAdmin ? (
+        <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    ) : (
+        <CommunitySidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    );
+
     return (
-        <AppLayout>
+        <AppLayout sidebar={sidebar} onMenuClick={() => setSidebarOpen(true)}>
             <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Dashboard Overview</h2>
-                <p className="text-gray-600">Real-time landslide risk monitoring</p>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Overview</h1>
+                <p className="text-gray-600">
+                    {isAdmin ? "Real-time landslide risk monitoring - Admin Dashboard" : "Real-time landslide risk monitoring - Community View"}
+                </p>
             </div>
-            <Dashboard />
+            <Dashboard showZScore={isAdmin} />
         </AppLayout>
     );
 }
