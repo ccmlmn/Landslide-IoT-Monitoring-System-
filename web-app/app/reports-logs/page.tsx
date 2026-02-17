@@ -105,35 +105,21 @@ export default function ReportsLogs() {
             </div>
           )}
 
-          {/* Filters */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Filter Reports</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
-                {["All", "Pending", "Reviewed", "Resolved"].map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => setFilterStatus(status)}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                      filterStatus === status
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    {status}
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Reports List */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span>Reports ({filteredReports.length})</span>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="px-4 py-2 border-2 border-gray-200 rounded-lg font-medium text-sm bg-white hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer"
+                >
+                  <option value="All">All</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Reviewed">Reviewed</option>
+                  <option value="Resolved">Resolved</option>
+                </select>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -149,12 +135,16 @@ export default function ReportsLogs() {
                       key={report._id}
                       className="border-2 border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-all"
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold text-lg text-gray-900">
-                              {report.reportType}
-                            </h3>
+                      {/* Mobile and Desktop Layout */}
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                        <div className="flex-1 space-y-2">
+                          {/* Report Title */}
+                          <h3 className="font-semibold text-lg text-gray-900">
+                            {report.reportType}
+                          </h3>
+                          
+                          {/* Severity and Status - Below title on mobile, inline on desktop */}
+                          <div className="flex flex-wrap items-center gap-2">
                             <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getSeverityColor(report.severity)}`}>
                               {report.severity} Severity
                             </span>
@@ -162,7 +152,9 @@ export default function ReportsLogs() {
                               {report.status}
                             </span>
                           </div>
-                          <div className="text-sm text-gray-600 space-y-1">
+
+                          {/* Report Details */}
+                          <div className="text-sm text-gray-600 space-y-1 pt-1">
                             <p><strong>From:</strong> {report.userName} ({report.userEmail})</p>
                             {report.location && <p><strong>Location:</strong> {report.location}</p>}
                             <p className="flex items-center gap-2">
@@ -171,11 +163,13 @@ export default function ReportsLogs() {
                             </p>
                           </div>
                         </div>
+
+                        {/* View Button - Inside card on mobile, separate on desktop */}
                         <button
                           onClick={() => setSelectedReport(selectedReport?._id === report._id ? null : report)}
-                          className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-all font-medium"
+                          className="w-full md:w-auto px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-all font-medium flex items-center justify-center gap-2 md:self-start"
                         >
-                          <Eye className="h-4 w-4 inline mr-2" />
+                          <Eye className="h-4 w-4" />
                           {selectedReport?._id === report._id ? "Hide" : "View"}
                         </button>
                       </div>
