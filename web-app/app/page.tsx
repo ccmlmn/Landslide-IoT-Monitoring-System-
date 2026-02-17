@@ -27,7 +27,7 @@ function DashboardLayout() {
     return (
         <AppLayout sidebar={sidebar} onMenuClick={() => setSidebarOpen(true)}>
             <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">Dashboard Overview</h2>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard Overview</h1>
                 <p className="text-gray-600">
                     {isAdmin ? "Real-time landslide risk monitoring - Admin Dashboard" : "Real-time landslide risk monitoring - Community View"}
                 </p>
