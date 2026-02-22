@@ -1,6 +1,6 @@
 # Landslide IoT Monitoring System (Slope Sentry)
 
-A comprehensive real-time IoT landslide monitoring system using ESP32 sensors, Python backend with Z-score based anomaly detection, Convex real-time database, and Next.js dashboard with Clerk authentication.
+A comprehensive real-time IoT landslide monitoring system using ESP32 sensors, Python backend with Z-score based anomaly detection, Convex real-time database, and Next.js dashboard with Clerk authentication and role-based access control.
 
 ## Architecture
 
@@ -12,9 +12,11 @@ ESP32 (Sensors) → Convex (HTTP Endpoint) → Database
                             Hybrid Risk Assessment Engine
                         (Z-Score Statistics + Fixed Thresholds)
                                               ↓
-                                    Convex (Anomaly Results)
+                                    Convex (Anomaly Results + Reports)
                                               ↓
                                     Next.js Dashboard (Multi-page App)
+                                              ↓
+                          Role-Based Views (Admin / Community)
                                               ↓
                                     Real-time Charts & Navigation
 ```
@@ -176,15 +178,35 @@ Upload to ESP32 using Arduino IDE:
 3. Select board: "ESP32 DEVKIT V1"
 4. Connect ESP32 and upload
 
-### 9. View the Dashboard
+### 9. Set Up User Roles (Clerk Dashboard)
+
+By default, all users have the `community` role. To grant admin access:
+
+1. Go to your [Clerk Dashboard](https://dashboard.clerk.com)
+2. Navigate to **Users** → select a user → **Metadata**
+3. In **Public Metadata**, add:
+   ```json
+   { "role": "admin" }
+   ```
+4. Save — the user will now see the Admin Dashboard on next sign-in.
+
+### 10. View the Dashboard
 
 1. Open http://localhost:3000
 2. Sign in with Clerk
-3. Navigate through multiple pages:
-   - **Overview**: Main dashboard with real-time sensor data and risk analysis
-   - **Live Monitoring**: Dedicated live sensor monitoring page (coming soon)
-   - **Alerts & Logs**: System alerts and event logs (coming soon)
-   - **Settings**: System configuration and preferences (coming soon)
+3. Navigate through the role-based pages:
+
+   **Admin users see:**
+   - **Overview**: Main dashboard with real-time sensor data and full risk analysis
+   - **Live Monitoring**: Detailed sensor analytics with threshold visualization
+   - **Alerts & Logs**: System alerts and event logs (in development)
+   - **Reports Logs**: Review and manage community-submitted reports
+   - **Settings**: System configuration (in development)
+
+   **Community users see:**
+   - **Overview**: Simplified risk dashboard
+   - **Live Monitoring**: Live sensor readings
+   - **Report Issue**: Submit ground observations (cracks, seepage, sounds, etc.)
 
 ## Project Structure
 
@@ -192,7 +214,7 @@ Upload to ESP32 using Arduino IDE:
 landslide-iot-system/
 ├── backend/
 │   ├── app.py                 # Python processing server (main loop)
-│   ├── anomaly_detector.py    # Z-score calculation logic
+│   ├── anomaly_detector.py    # Hybrid Z-score + threshold detection logic
 │   ├── convex_client.py       # Convex API wrapper
 │   ├── requirements.txt       # Python dependencies
 │   ├── test_esp32.py          # Simulate ESP32 data
@@ -200,28 +222,39 @@ landslide-iot-system/
 ├── web-app/
 │   ├── app/
 │   │   ├── layout.tsx              # Root layout with Clerk/Convex providers
-│   │   ├── page.tsx                # Main dashboard (Overview)
+│   │   ├── page.tsx                # Main dashboard (role-aware Overview)
 │   │   ├── globals.css             # Global styles
 │   │   ├── live-monitoring/
-│   │   │   └── page.tsx            # Live monitoring page
+│   │   │   └── page.tsx            # Live monitoring page (all roles)
 │   │   ├── alerts-logs/
-│   │   │   └── page.tsx            # Alerts & logs page
+│   │   │   └── page.tsx            # Alerts & logs page (admin only)
+│   │   ├── report/
+│   │   │   └── page.tsx            # Community issue reporting page
+│   │   ├── reports-logs/
+│   │   │   └── page.tsx            # Admin view for all community reports
 │   │   └── settings/
-│   │       └── page.tsx            # Settings page
+│   │       └── page.tsx            # Settings page (in development)
 │   ├── components/
 │   │   ├── AppLayout.tsx           # Shared layout with sidebar & header
 │   │   ├── Dashboard.tsx           # Real-time dashboard with charts
-│   │   ├── Sidebar.tsx             # Navigation sidebar
+│   │   ├── RoleGuard.tsx           # Client-side role-based route protection
 │   │   ├── Providers.tsx           # Clerk + Convex setup
+│   │   ├── Sidebar.tsx             # Base navigation sidebar
+│   │   ├── admin/
+│   │   │   └── AdminSidebar.tsx    # Admin navigation (all 5 pages)
+│   │   ├── community/
+│   │   │   └── CommunitySidebar.tsx # Community navigation (3 pages)
 │   │   └── ui/
 │   │       └── card.tsx            # Reusable card component
 │   ├── convex/
-│   │   ├── schema.ts               # Database schema (sensorData, anomalyResults)
+│   │   ├── schema.ts               # Database schema (sensorData, anomalyResults, reports)
 │   │   ├── sensorData.ts           # CRUD operations for sensor data
 │   │   ├── anomalyResults.ts       # CRUD operations for risk analysis
+│   │   ├── reports.ts              # Community report mutations & queries
 │   │   └── http.ts                 # ESP32 HTTP endpoint
 │   ├── lib/
-│   │   └── utils.ts                # Utility functions (cn helper)
+│   │   ├── utils.ts                # Utility functions (cn helper)
+│   │   └── clerk-roles.ts          # Server-side role helpers
 │   ├── middleware.ts               # Clerk auth middleware
 │   ├── package.json                # Node.js dependencies
 │   └── .env.local
@@ -285,17 +318,17 @@ landslide-iot-system/
 6. **Python** saves comprehensive results to `anomalyResults` table in Convex:
    - Risk scores, Z-scores, threshold status, rolling averages
 7. **Next.js dashboard** subscribes to real-time updates from Convex
-8. **Overview Dashboard** displays:
+8. **Role-based routing**: Clerk role (`admin` / `community`) determines the sidebar and accessible pages
+9. **Admin dashboard** displays:
    - Combined risk level with color-coded status
-   - Live sensor values (rain, soil moisture, tilt)
-   - Interactive charts showing historical trends
-   - Recent history of sensor readings with Z-scores
-   - Timestamp and location information
-9. **Live Monitoring Page** shows detailed analytics:
-   - Individual sensor cards with threshold status
-   - Warning and danger threshold lines on charts
-   - Rolling mean visualization
-   - Both Z-score and threshold-based analysis
+   - Live sensor values (rain, soil moisture, tilt) with Z-scores
+   - Interactive charts showing historical trends with threshold lines
+   - Recent history of sensor readings
+   - Access to Reports Logs for managing community submissions
+10. **Community dashboard** displays:
+    - Simplified risk overview
+    - Live sensor readings
+    - Report Issue form for submitting ground observations
 
 ## API Endpoints
 
@@ -313,12 +346,18 @@ landslide-iot-system/
 - `api.sensorData.getUnprocessedData` - Get data needing processing
 - `api.sensorData.getAll` - Get all sensor readings
 - `api.sensorData.getLatest` - Get latest sensor reading
+- `api.reports.getAllReports` - Get all community reports (admin)
+- `api.reports.getReportsByStatus` - Filter reports by status
+- `api.reports.getRecentReports` - Get recent reports with limit
+- `api.reports.getReportStats` - Get report count statistics
 
 ### Convex Mutations
 
 - `api.sensorData.addSensorData` - Add new sensor reading
 - `api.sensorData.markAsProcessed` - Mark data as processed
 - `api.anomalyResults.addAnomalyResult` - Add risk analysis result
+- `api.reports.submitReport` - Submit a new community report
+- `api.reports.updateReportStatus` - Update report status (admin)
 
 ## Features
 
@@ -327,7 +366,7 @@ landslide-iot-system/
 - Live sensor data updates every 5 seconds
 - Instant risk level changes with color-coded status indicators
 - WebSocket-based real-time updates via Convex
-- Multi-page navigation with Overview, Live Monitoring, Alerts & Logs, and Settings
+- Multi-page navigation with Overview, Live Monitoring, Alerts & Logs, Reports Logs, and Settings
 - Mobile-responsive sidebar with hamburger menu
 
 ### Intelligent Risk Analysis
@@ -344,34 +383,34 @@ landslide-iot-system/
   - **Soil Moisture**: Warning 70%, Danger 85% (saturation/liquefaction)
   - **Rain**: Warning 50, Danger 75 (intensity thresholds)
 
-### Interactive Dashboard
+### Role-Based Access Control (RBAC)
 
-- **Multi-page Application**:
-  - **Overview**: Main dashboard with combined risk assessment
-  - **Live Monitoring**: Detailed sensor analytics with threshold visualization
-  - **Alerts & Logs**: Event history and notifications (coming soon)
-  - **Settings**: System configuration (coming soon)
-- **Responsive Layout**: Mobile-first design with collapsible sidebar and hamburger menu
-- **Real-time Charts**: Interactive sensor trends with threshold lines and rolling averages
-- **Threshold Visualization**: Warning and danger lines on all charts
-- **Header Bar**: Shows online status, last updated time, dark mode toggle, and user profile
-- **Navigation Sidebar**: Easy access to all sections with active page highlighting
-- **Color-coded Cards**: Sensor status cards change color based on threshold breach
-- **Dual Method Display**: Shows both Z-scores and threshold status for each sensor
-- **Loading States**: Skeleton screens for better UX during data fetching
+- **Two roles**: `admin` and `community` (default)
+- Role stored in Clerk `publicMetadata.role`
+- `RoleGuard` component restricts access to admin-only pages client-side
+- `clerk-roles.ts` provides server-side role checking utilities
+- **Admin Dashboard** — full access to all pages and data
+- **Community Dashboard** — simplified monitoring + report submission
 
-### Hardware Integration
+### Community Reporting
 
-- Multiple sensor types: rain, soil moisture, tilt
-- Visual alerts with LEDs for each sensor
-- Audible alerts via buzzer
-- WiFi connectivity for remote monitoring
-- JSON-based data transmission
+- Community members can submit ground-level observations via the **Report Issue** page
+- **Report types**: Ground Crack, Water Seepage, Strange Sound, Unusual Movement, Falling Rocks, Other
+- **Severity levels**: Low, Medium, High
+- Optional location field for geolocation context
+- Reports are stored in the `reports` Convex table with `Pending` status on creation
+- **Admin Reports Logs** page allows admins to:
+  - View all reports with severity and status badges
+  - Filter reports by status (All / Pending / Reviewed / Resolved)
+  - Update report status with optional admin notes
+  - Track report statistics (totals, pending count, resolved count)
 
 ### Security & Authentication
 
 - Clerk-based user authentication with UserButton component
-- Protected routes with middleware
+- **Role-Based Access Control**: Admin and Community roles via Clerk public metadata
+- `RoleGuard` client-side component for page-level protection
+- Protected routes with Next.js middleware
 - Secure environment variable management
 - HTTPS communication
 - Session management across all pages
@@ -404,14 +443,6 @@ The system uses a **dual-method approach** for maximum safety, combining statist
 3. **Advantage**: Respects absolute physical limits
 4. **Use Case**: Prevents exceeding structural failure points
 
-### Hybrid Combination Logic
-
-```python
-# Conservative fail-safe approach
-final_risk = max(statistical_risk, threshold_risk)
-final_state = worse_of(statistical_state, threshold_state)
-```
-
 **Why Both Methods?**
 
 - **Z-Score catches**: Sudden changes, early warnings, rate of change
@@ -433,39 +464,9 @@ final_state = worse_of(statistical_state, threshold_state)
 3. **Normal Operation**: Stable readings within limits
    - Z-Score: NORMAL | Threshold: NORMAL → **Final: NORMAL**
 
-## Troubleshooting
-
-### Python can't connect to Convex
-
-- Verify `CONVEX_URL` in `backend/.env`
-- Make sure `npx convex dev` is running
-
-### Dashboard shows "Waiting for sensor data"
-
-- Run the test script: `python backend/test_esp32.py`
-- Check Python backend is running and processing data
-- Verify Convex deployment is active
-- Check browser console for errors
-
-### Clerk authentication issues
-
-- Verify API keys in `web-app/.env.local`
-- Check Clerk dashboard for correct keys
-- Ensure middleware.ts is properly configured
-- Clear browser cache and cookies
-
-### ESP32 Connection Issues
-
-- Verify WiFi credentials in firmware
-- Check serial monitor for connection logs
-- Ensure Convex URL is correct and accessible
-- Test with `curl` command first
-
 ## Future Improvements
 
 - [ ] Build Alerts & Logs page with event history and filtering
 - [ ] Develop Settings page for system configuration
 - [ ] SMS/Email alert notifications
 - [ ] Weather API integration for correlation
-- [ ] Customizable risk thresholds
-- [ ] Geolocation mapping with risk zones
