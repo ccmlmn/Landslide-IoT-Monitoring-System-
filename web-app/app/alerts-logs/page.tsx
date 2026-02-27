@@ -308,14 +308,14 @@ export default function AlertsLogs() {
           </div>
 
           {/* Filters */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
               <Search className="h-4 w-4" />
               Filters:
             </div>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto flex-1">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full">
               {/* Search input */}
-              <div className="relative flex-1 w-full sm:w-auto sm:min-w-[280px]">
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
@@ -325,50 +325,52 @@ export default function AlertsLogs() {
                   className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700 placeholder:text-gray-400"
                 />
               </div>
-              {/* Status filter */}
-              <div className="relative">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="appearance-none pl-4 pr-10 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+              <div className="flex items-center gap-3">
+                {/* Status filter */}
+                <div className="relative flex-1 sm:flex-none">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="w-full appearance-none pl-4 pr-10 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                  >
+                    <option className="text-gray-700">All Status</option>
+                    <option className="text-gray-700">Danger</option>
+                    <option className="text-gray-700">Warning</option>
+                    <option className="text-gray-700">Normal</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                </div>
+                {/* Sensor filter */}
+                <div className="relative flex-1 sm:flex-none">
+                  <select
+                    value={sensorFilter}
+                    onChange={(e) => setSensorFilter(e.target.value)}
+                    className="w-full appearance-none pl-4 pr-10 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                  >
+                    <option className="text-gray-700">All Sensors</option>
+                    {nodeIds.map((id) => (
+                      <option key={id} value={id} className="text-gray-700">
+                        {id}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                </div>
+                {/* Clear filters */}
+                <button
+                  onClick={clearFilters}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
+                  title="Clear filters"
                 >
-                  <option className="text-gray-700">All Status</option>
-                  <option className="text-gray-700">Danger</option>
-                  <option className="text-gray-700">Warning</option>
-                  <option className="text-gray-700">Normal</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <X className="h-4 w-4 text-gray-400" />
+                </button>
               </div>
-              {/* Sensor filter */}
-              <div className="relative">
-                <select
-                  value={sensorFilter}
-                  onChange={(e) => setSensorFilter(e.target.value)}
-                  className="appearance-none pl-4 pr-10 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
-                >
-                  <option className="text-gray-700">All Sensors</option>
-                  {nodeIds.map((id) => (
-                    <option key={id} value={id} className="text-gray-700">
-                      {id}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-              </div>
-              {/* Clear filters */}
-              <button
-                onClick={clearFilters}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                title="Clear filters"
-              >
-                <X className="h-4 w-4 text-gray-400" />
-              </button>
             </div>
           </div>
 
           {/* Alert Logs Table */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900">Alert Logs</h2>
               <span className="text-sm text-gray-500">{filteredData.length} records</span>
             </div>
@@ -388,48 +390,93 @@ export default function AlertsLogs() {
                 <p className="text-sm mt-1">Try adjusting your filters</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Timestamp</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Node ID</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Location</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Tilt (°)</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Moisture (%)</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Tilt Z</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Moisture Z</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Status</th>
-                      <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {filteredData.map((alert) => (
-                      <tr key={alert._id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-4 text-gray-700 whitespace-nowrap">{alert.timestamp}</td>
-                        <td className="px-6 py-4 text-gray-700 font-medium whitespace-nowrap">{alert.nodeId}</td>
-                        <td className="px-6 py-4 text-gray-700 whitespace-nowrap">{alert.location}</td>
-                        <td className="px-6 py-4 text-gray-700">{alert.tilt.toFixed(1)}</td>
-                        <td className="px-6 py-4 text-gray-700">{alert.moisture.toFixed(1)}</td>
-                        <td className="px-6 py-4 text-gray-700">{alert.tiltZ.toFixed(2)}</td>
-                        <td className="px-6 py-4 text-gray-700">{alert.moistureZ.toFixed(2)}</td>
-                        <td className="px-6 py-4">
+              <>
+                {/* Mobile card list — visible only on small screens */}
+                <div className="sm:hidden divide-y divide-gray-100">
+                  {filteredData.map((alert) => (
+                    <div key={alert._id} className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-xs text-gray-400">{alert.timestamp}</p>
+                          <p className="text-sm font-semibold text-gray-900 mt-0.5">{alert.nodeId}</p>
+                          <p className="text-xs text-gray-500">{alert.location}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
                           <StatusBadge status={alert.status} />
-                        </td>
-                        <td className="px-6 py-4">
                           <button
                             onClick={() => setSelectedAlert(alert)}
                             className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
-                            title="View details"
                           >
                             <Eye className="h-4 w-4" />
                           </button>
-                        </td>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-center">
+                        <div className="bg-gray-50 rounded-lg p-2">
+                          <p className="text-xs text-gray-400">Tilt</p>
+                          <p className="text-sm font-bold text-gray-800">{alert.tilt.toFixed(1)}°</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-2">
+                          <p className="text-xs text-gray-400">Moisture</p>
+                          <p className="text-sm font-bold text-gray-800">{alert.moisture.toFixed(1)}%</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-2">
+                          <p className="text-xs text-gray-400">Tilt Z</p>
+                          <p className="text-sm font-bold text-gray-800">{alert.tiltZ.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-2">
+                          <p className="text-xs text-gray-400">Moist Z</p>
+                          <p className="text-sm font-bold text-gray-800">{alert.moistureZ.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop table — hidden on small screens */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-sm min-w-[800px]">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Timestamp</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Node ID</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Location</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Tilt (°)</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Moisture (%)</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Tilt Z</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Moisture Z</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Status</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-blue-600 uppercase tracking-wider">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {filteredData.map((alert) => (
+                        <tr key={alert._id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-6 py-4 text-gray-700 whitespace-nowrap">{alert.timestamp}</td>
+                          <td className="px-6 py-4 text-gray-700 font-medium whitespace-nowrap">{alert.nodeId}</td>
+                          <td className="px-6 py-4 text-gray-700 whitespace-nowrap">{alert.location}</td>
+                          <td className="px-6 py-4 text-gray-700">{alert.tilt.toFixed(1)}</td>
+                          <td className="px-6 py-4 text-gray-700">{alert.moisture.toFixed(1)}</td>
+                          <td className="px-6 py-4 text-gray-700">{alert.tiltZ.toFixed(2)}</td>
+                          <td className="px-6 py-4 text-gray-700">{alert.moistureZ.toFixed(2)}</td>
+                          <td className="px-6 py-4">
+                            <StatusBadge status={alert.status} />
+                          </td>
+                          <td className="px-6 py-4">
+                            <button
+                              onClick={() => setSelectedAlert(alert)}
+                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-400 hover:text-gray-600"
+                              title="View details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         </div>
