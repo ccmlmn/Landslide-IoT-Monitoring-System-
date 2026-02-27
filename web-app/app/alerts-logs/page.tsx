@@ -322,7 +322,7 @@ export default function AlertsLogs() {
                   placeholder="Search by node or location..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-700 placeholder:text-gray-400"
                 />
               </div>
               {/* Status filter */}
@@ -330,12 +330,12 @@ export default function AlertsLogs() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="appearance-none pl-4 pr-10 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                  className="appearance-none pl-4 pr-10 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
                 >
-                  <option>All Status</option>
-                  <option>Danger</option>
-                  <option>Warning</option>
-                  <option>Normal</option>
+                  <option className="text-gray-700">All Status</option>
+                  <option className="text-gray-700">Danger</option>
+                  <option className="text-gray-700">Warning</option>
+                  <option className="text-gray-700">Normal</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               </div>
@@ -344,11 +344,11 @@ export default function AlertsLogs() {
                 <select
                   value={sensorFilter}
                   onChange={(e) => setSensorFilter(e.target.value)}
-                  className="appearance-none pl-4 pr-10 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                  className="appearance-none pl-4 pr-10 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
                 >
-                  <option>All Sensors</option>
+                  <option className="text-gray-700">All Sensors</option>
                   {nodeIds.map((id) => (
-                    <option key={id} value={id}>
+                    <option key={id} value={id} className="text-gray-700">
                       {id}
                     </option>
                   ))}

@@ -66,4 +66,11 @@
     body {
         @apply bg-background text-foreground;
     }
+
+    select,
+    option,
+    input {
+        color: #374151;
+        background-color: #fff;
+    }
 }
