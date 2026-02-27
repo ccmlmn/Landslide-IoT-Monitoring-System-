@@ -26,7 +26,6 @@ export default function Settings() {
 
   // Threshold Value Settings (demo - values don't persist)
   const [soilMoistureThreshold, setSoilMoistureThreshold] = useState(75);
-  const [vibrationThreshold, setVibrationThreshold] = useState(4.5);
   const [rainfallThreshold, setRainfallThreshold] = useState(50);
   const [inclinationThreshold, setInclinationThreshold] = useState(15);
 
@@ -69,7 +68,6 @@ export default function Settings() {
     setSlidingWindowSize(10);
     setChartRefreshRate(3);
     setSoilMoistureThreshold(75);
-    setVibrationThreshold(4.5);
     setRainfallThreshold(50);
     setInclinationThreshold(15);
   };
@@ -248,32 +246,6 @@ export default function Settings() {
                   />
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                     Alert when soil moisture exceeds this value
-                  </p>
-                </div>
-
-                {/* Vibration */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Vibration Threshold
-                    </label>
-                    <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">
-                      {vibrationThreshold.toFixed(1)} g
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0.5"
-                    max="10.0"
-                    step="0.1"
-                    value={vibrationThreshold}
-                    onChange={(e) =>
-                      setVibrationThreshold(parseFloat(e.target.value))
-                    }
-                    className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                  />
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                    Alert when ground vibration exceeds this level
                   </p>
                 </div>
 
