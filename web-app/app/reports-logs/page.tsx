@@ -72,7 +72,7 @@ export default function ReportsLogs() {
                   <CardTitle className="text-sm font-medium text-gray-600">Total Reports</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold text-gray-900">{stats.total}</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-gray-200">{stats.total}</div>
                 </CardContent>
               </Card>
 
