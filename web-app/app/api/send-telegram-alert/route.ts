@@ -29,16 +29,16 @@ export async function POST(req: NextRequest) {
         });
 
     const message = [
-      `🚨 *LANDSLIDE HIGH RISK ALERT* 🚨`,
+      `🚨 <b>LANDSLIDE HIGH RISK ALERT</b> 🚨`,
       ``,
-      `⚠️ *Risk Level:* HIGH`,
-      `📊 *Risk Score:* ${(riskScore * 100).toFixed(1)}%`,
+      `⚠️ <b>Risk Level:</b> HIGH`,
+      `📊 <b>Risk Score:</b> ${(riskScore * 100).toFixed(1)}%`,
       ``,
-      `Location: Site A`,
+      `📍 <b>Location:</b> Site A`,
       ``,
-      `🕒 *Time (MYT):* ${time}`,
+      `🕒 <b>Time (MYT):</b> ${time}`,
       ``,
-      `⚡ Immediate action may be required\\!. Please evacuate to Site B to ensure safety\\.`,
+      `⚡ Immediate action may be required! Please evacuate to Site B to ensure safety.`,
     ].join("\n");
 
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         chat_id: TELEGRAM_CHAT_ID,
         text: message,
-        parse_mode: "MarkdownV2",
+        parse_mode: "HTML",
       }),
     });
 

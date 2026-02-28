@@ -132,10 +132,14 @@ http.route({
         // Send Telegram alert when risk transitions INTO High
         if (riskResult.riskState === "High" && previousRiskState !== "High") {
           try {
-            const deploymentUrl = process.env.NEXT_PUBLIC_VERCEL_URL || process.env.VERCEL_URL;
-            const alertUrl = deploymentUrl
-              ? `https://${deploymentUrl}/api/send-telegram-alert`
-              : "http://localhost:3000/api/send-telegram-alert";
+            // SITE_URL must be set in the Convex dashboard environment variables
+            // e.g. https://your-app.vercel.app (no trailing slash)
+            const siteUrl = process.env.SITE_URL;
+            if (!siteUrl) {
+              console.error("SITE_URL env var not set in Convex dashboard — Telegram alert skipped");
+              throw new Error("SITE_URL not configured");
+            }
+            const alertUrl = `${siteUrl}/api/send-telegram-alert`;
 
             await fetch(alertUrl, {
               method: "POST",
