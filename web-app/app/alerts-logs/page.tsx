@@ -90,7 +90,7 @@ function AlertDetailModal({
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+          className="absolute top-4 right-4 p-1 hover:bg-gray-100 rounded-full transition-colors"
         >
           <X className="h-5 w-5 text-gray-400" />
         </button>
