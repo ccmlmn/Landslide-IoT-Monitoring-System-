@@ -13,11 +13,11 @@ function DashboardSkeleton() {
       {/* Risk Status Card Skeleton */}
       <Card className="border-2">
         <CardHeader>
-          <div className="h-7 bg-gray-200 rounded w-64"></div>
+          <div className="h-7 bg-gray-200 dark:bg-gray-700 rounded w-64"></div>
         </CardHeader>
         <CardContent>
-          <div className="h-12 bg-gray-200 rounded w-32 mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-48"></div>
+          <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-2"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-48"></div>
         </CardContent>
       </Card>
 
@@ -26,12 +26,12 @@ function DashboardSkeleton() {
         {[1, 2, 3].map((i) => (
           <Card key={i}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="h-5 bg-gray-200 rounded w-24"></div>
-              <div className="h-4 w-4 bg-gray-200 rounded"></div>
+              <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+              <div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
             </CardHeader>
             <CardContent>
-              <div className="h-8 bg-gray-200 rounded w-20 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-32"></div>
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-20 mb-2"></div>
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
             </CardContent>
           </Card>
         ))}
@@ -40,22 +40,22 @@ function DashboardSkeleton() {
       {/* Recent History Skeleton */}
       <Card>
         <CardHeader>
-          <div className="h-6 bg-gray-200 rounded w-40"></div>
+          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-40"></div>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             {[1, 2, 3, 4, 5].map((i) => (
               <div
                 key={i}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
               >
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-48"></div>
-                  <div className="h-3 bg-gray-200 rounded w-64"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-48"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-64"></div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="h-6 bg-gray-200 rounded-full w-20"></div>
-                  <div className="h-6 bg-gray-200 rounded w-12"></div>
+                  <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded-full w-20"></div>
+                  <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-12"></div>
                 </div>
               </div>
             ))}
@@ -82,13 +82,13 @@ export function Dashboard({ showZScore = true }: DashboardProps) {
   const getRiskColor = (riskState: string) => {
     switch (riskState) {
       case "High":
-        return "text-red-600 bg-red-50 border-red-200";
+        return "text-red-600 bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800";
       case "Moderate":
-        return "text-yellow-600 bg-yellow-50 border-yellow-200";
+        return "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800";
       case "Low":
-        return "text-green-600 bg-green-50 border-green-200";
+        return "text-green-600 bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800";
       default:
-        return "text-gray-600 bg-gray-50 border-gray-200";
+        return "text-gray-600 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600";
     }
   };
 
@@ -116,7 +116,7 @@ export function Dashboard({ showZScore = true }: DashboardProps) {
           <div className="text-4xl font-bold mb-2">
             {latestResult.riskScore}%
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             Last updated: {new Date(latestResult.timestamp).toLocaleString()}
           </p>
         </CardContent>
@@ -132,7 +132,7 @@ export function Dashboard({ showZScore = true }: DashboardProps) {
           <CardContent>
             <div className="text-2xl font-bold">{latestResult.rainValue.toFixed(2)}</div>
             {showZScore && (
-              <p className="text-xs text-gray-600">Z-Score: {latestResult.zScoreRain.toFixed(2)}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Z-Score: {latestResult.zScoreRain.toFixed(2)}</p>
             )}
           </CardContent>
         </Card>
@@ -145,7 +145,7 @@ export function Dashboard({ showZScore = true }: DashboardProps) {
           <CardContent>
             <div className="text-2xl font-bold">{latestResult.soilMoisture.toFixed(2)}</div>
             {showZScore && (
-              <p className="text-xs text-gray-600">Z-Score: {latestResult.zScoreSoil.toFixed(2)}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Z-Score: {latestResult.zScoreSoil.toFixed(2)}</p>
             )}
           </CardContent>
         </Card>
@@ -158,7 +158,7 @@ export function Dashboard({ showZScore = true }: DashboardProps) {
           <CardContent>
             <div className="text-2xl font-bold">{latestResult.tiltValue.toFixed(2)}</div>
             {showZScore && (
-              <p className="text-xs text-gray-600">Z-Score: {latestResult.zScoreTilt.toFixed(2)}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Z-Score: {latestResult.zScoreTilt.toFixed(2)}</p>
             )}
           </CardContent>
         </Card>
@@ -175,7 +175,7 @@ export function Dashboard({ showZScore = true }: DashboardProps) {
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   chartFilter === 'all'
                     ? 'bg-green-600 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 All Sensors
@@ -185,7 +185,7 @@ export function Dashboard({ showZScore = true }: DashboardProps) {
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   chartFilter === 'rain'
                     ? 'bg-blue-600 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 Rain
@@ -195,7 +195,7 @@ export function Dashboard({ showZScore = true }: DashboardProps) {
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   chartFilter === 'soil'
                     ? 'bg-amber-600 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 Soil
@@ -205,7 +205,7 @@ export function Dashboard({ showZScore = true }: DashboardProps) {
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   chartFilter === 'tilt'
                     ? 'bg-purple-600 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
                 Tilt
@@ -216,22 +216,23 @@ export function Dashboard({ showZScore = true }: DashboardProps) {
         <CardContent>
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <CartesianGrid strokeDasharray="3 3" className="[&>line]:stroke-gray-200 dark:[&>line]:stroke-gray-600" />
               <XAxis 
                 dataKey="time" 
-                stroke="#6b7280"
+                stroke="#9ca3af"
                 style={{ fontSize: '12px' }}
               />
               <YAxis 
-                stroke="#6b7280"
+                stroke="#9ca3af"
                 style={{ fontSize: '12px' }}
               />
               <Tooltip 
                 contentStyle={{ 
-                  backgroundColor: 'white', 
-                  border: '1px solid #e5e7eb',
+                  backgroundColor: 'var(--tooltip-bg, white)', 
+                  border: '1px solid var(--tooltip-border, #e5e7eb)',
                   borderRadius: '8px',
-                  padding: '12px'
+                  padding: '12px',
+                  color: 'var(--tooltip-text, #111827)'
                 }}
                 labelStyle={{ fontWeight: 'bold', marginBottom: '8px' }}
               />
@@ -298,7 +299,7 @@ export function Dashboard({ showZScore = true }: DashboardProps) {
                   item.status === 'High' ? 'bg-red-600' :
                   item.status === 'Moderate' ? 'bg-yellow-600' : 'bg-green-600'
                 }`}></div>
-                <span className="text-xs text-gray-600">{item.time}</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">{item.time}</span>
                 <span className={`text-xs font-semibold ${
                   item.status === 'High' ? 'text-red-600' :
                   item.status === 'Moderate' ? 'text-yellow-600' : 'text-green-600'

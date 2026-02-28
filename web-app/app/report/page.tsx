@@ -78,18 +78,18 @@ export default function ReportPage() {
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-3">
             <MessageSquare className="h-8 w-8 text-green-600" />
             Submit a Report
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             Report any unusual observations or concerns about landslide risks in your area
           </p>
         </div>
 
         {/* Success Message */}
         {submitSuccess && (
-          <Card className="border-2 border-green-200 bg-green-50">
+          <Card className="border-2 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30">
             <CardContent className="pt-6">
               <div className="flex items-center gap-3 text-green-800">
                 <CheckCircle className="h-6 w-6" />
@@ -103,9 +103,9 @@ export default function ReportPage() {
         )}
 
         {/* Info Card */}
-        <Card className="border-2 border-blue-200 bg-blue-50">
+        <Card className="border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30">
           <CardContent className="pt-6">
-            <div className="flex items-start gap-3 text-blue-800">
+            <div className="flex items-start gap-3 text-blue-800 dark:text-blue-300">
               <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
               <div className="text-sm">
                 <p className="font-semibold mb-1">When to report:</p>
@@ -130,13 +130,13 @@ export default function ReportPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Report Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Type of Observation *
                 </label>
                 <select
                   value={formData.reportType}
                   onChange={(e) => setFormData({ ...formData, reportType: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   required
                 >
                   {reportTypes.map((type) => (
@@ -149,7 +149,7 @@ export default function ReportPage() {
 
               {/* Severity */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Severity Level *
                 </label>
                 <div className="grid grid-cols-3 gap-3">
@@ -160,8 +160,8 @@ export default function ReportPage() {
                       onClick={() => setFormData({ ...formData, severity: level.value })}
                       className={`px-4 py-3 rounded-lg border-2 transition-all ${
                         formData.severity === level.value
-                          ? `${level.bg} border-current ${level.color} font-semibold shadow-md`
-                          : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                          ? `${level.bg} dark:bg-opacity-30 border-current ${level.color} font-semibold shadow-md`
+                          : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                       }`}
                     >
                       {level.value}
@@ -172,7 +172,7 @@ export default function ReportPage() {
 
               {/* Location */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Location (Optional)
                 </label>
                 <input
@@ -180,13 +180,13 @@ export default function ReportPage() {
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   placeholder="e.g., Near Main Road, Behind Community Hall"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Description *
                 </label>
                 <textarea
@@ -194,10 +194,10 @@ export default function ReportPage() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Please describe what you observed in detail..."
                   rows={5}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Include details like when you noticed it, size, location, etc.
                 </p>
               </div>
@@ -219,7 +219,7 @@ export default function ReportPage() {
                     location: "",
                     severity: "Medium",
                   })}
-                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-all"
+                  className="px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
                 >
                   Clear
                 </button>
@@ -229,9 +229,9 @@ export default function ReportPage() {
         </Card>
 
         {/* Privacy Notice */}
-        <Card className="bg-gray-50">
+        <Card className="bg-gray-50 dark:bg-gray-800">
           <CardContent className="pt-6">
-            <p className="text-xs text-gray-600 text-center">
+            <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
               Your report will be reviewed by our monitoring team. Your contact information will be kept confidential.
             </p>
           </CardContent>
