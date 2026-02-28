@@ -47,15 +47,15 @@ export default function LiveMonitoring() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Live Sensor Monitoring</h1>
-              <p className="text-gray-600">Real-time sensor data with detailed analytics</p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Live Sensor Monitoring</h1>
+              <p className="text-gray-600 dark:text-gray-400">Real-time sensor data with detailed analytics</p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg">
+              <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-4 py-2 rounded-lg">
                 <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                 <span className="text-sm font-medium">Live</span>
               </div>
-              <div className="flex items-center gap-2 text-gray-600">
+              <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                 <Activity className="h-4 w-4" />
                 <span className="text-sm">Auto-refresh: 2s</span>
               </div>
@@ -64,11 +64,11 @@ export default function LiveMonitoring() {
           
           <div className="animate-pulse space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="h-40 bg-gray-200 rounded-lg"></div>
-              <div className="h-40 bg-gray-200 rounded-lg"></div>
-              <div className="h-40 bg-gray-200 rounded-lg"></div>
+              <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+              <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+              <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
             </div>
-            <div className="h-96 bg-gray-200 rounded-lg"></div>
+            <div className="h-96 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
           </div>
         </div>
       </AppLayout>
@@ -111,9 +111,9 @@ export default function LiveMonitoring() {
 
   const getSensorStatusColor = (status: string) => {
     switch (status) {
-      case 'danger': return 'text-red-600 bg-red-50 border-red-200';
-      case 'warning': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      default: return 'text-green-600 bg-green-50 border-green-200';
+      case 'danger': return 'text-red-600 bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800';
+      case 'warning': return 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800';
+      default: return 'text-green-600 bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800';
     }
   };
 
@@ -132,15 +132,15 @@ export default function LiveMonitoring() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Live Sensor Monitoring</h1>
-            <p className="text-gray-600">Real-time sensor data with detailed analytics</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Live Sensor Monitoring</h1>
+            <p className="text-gray-600 dark:text-gray-400">Real-time sensor data with detailed analytics</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg">
+            <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-4 py-2 rounded-lg">
               <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
               <span className="text-sm font-medium">Live</span>
             </div>
-            <div className="flex items-center gap-2 text-gray-600">
+            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
               <Activity className="h-4 w-4" />
               <span className="text-sm">Auto-refresh: 2s</span>
             </div>
@@ -166,9 +166,9 @@ export default function LiveMonitoring() {
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold">{latestData.tiltValue.toFixed(1)}</span>
-                  <span className="text-lg text-gray-500">{thresholds.tilt.unit}</span>
+                  <span className="text-lg text-gray-500 dark:text-gray-400">{thresholds.tilt.unit}</span>
                 </div>
-                <div className="text-xs text-gray-600">
+                <div className="text-xs text-gray-600 dark:text-gray-400">
                   {thresholdStatus.tilt.message}
                 </div>
               </div>
@@ -192,9 +192,9 @@ export default function LiveMonitoring() {
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold">{latestData.soilMoisture.toFixed(1)}</span>
-                  <span className="text-lg text-gray-500">{thresholds.soil.unit}</span>
+                  <span className="text-lg text-gray-500 dark:text-gray-400">{thresholds.soil.unit}</span>
                 </div>
-                <div className="text-xs text-gray-600">
+                <div className="text-xs text-gray-600 dark:text-gray-400">
                   {thresholdStatus.soil.message}
                 </div>
               </div>
@@ -218,9 +218,9 @@ export default function LiveMonitoring() {
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold">{latestData.rainValue.toFixed(1)}</span>
-                  <span className="text-lg text-gray-500">{thresholds.rain.unit || 'units'}</span>
+                  <span className="text-lg text-gray-500 dark:text-gray-400">{thresholds.rain.unit || 'units'}</span>
                 </div>
-                <div className="text-xs text-gray-600">
+                <div className="text-xs text-gray-600 dark:text-gray-400">
                   {thresholdStatus.rain.message}
                 </div>
               </div>
@@ -236,15 +236,15 @@ export default function LiveMonitoring() {
                 <TrendingUp className="h-5 w-5 text-blue-600" />
                 <CardTitle>Tilt Angle Over Time</CardTitle>
               </div>
-              <span className="text-sm text-gray-500">{chartData.length} readings</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{chartData.length} readings</span>
             </div>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis dataKey="time" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} domain={[0, thresholds.tilt.danger * 1.2]} />
+                <CartesianGrid strokeDasharray="3 3" className="[&>line]:stroke-gray-200 dark:[&>line]:stroke-gray-600" />
+                <XAxis dataKey="time" tick={{ fontSize: 12 }} stroke="#9ca3af" />
+                <YAxis tick={{ fontSize: 12 }} domain={[0, thresholds.tilt.danger * 1.2]} stroke="#9ca3af" />
                 <Tooltip />
                 <Legend />
                 
@@ -323,15 +323,15 @@ export default function LiveMonitoring() {
                 <Droplets className="h-5 w-5 text-green-600" />
                 <CardTitle>Soil Moisture Over Time</CardTitle>
               </div>
-              <span className="text-sm text-gray-500">{chartData.length} readings</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{chartData.length} readings</span>
             </div>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis dataKey="time" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} domain={[0, thresholds.soil.danger * 1.2]} />
+                <CartesianGrid strokeDasharray="3 3" className="[&>line]:stroke-gray-200 dark:[&>line]:stroke-gray-600" />
+                <XAxis dataKey="time" tick={{ fontSize: 12 }} stroke="#9ca3af" />
+                <YAxis tick={{ fontSize: 12 }} domain={[0, thresholds.soil.danger * 1.2]} stroke="#9ca3af" />
                 <Tooltip />
                 <Legend />
                 
@@ -407,15 +407,15 @@ export default function LiveMonitoring() {
                 <Gauge className="h-5 w-5 text-purple-600" />
                 <CardTitle>Rain Intensity Over Time</CardTitle>
               </div>
-              <span className="text-sm text-gray-500">{chartData.length} readings</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{chartData.length} readings</span>
             </div>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis dataKey="time" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} domain={[0, thresholds.rain.danger * 1.2]} />
+                <CartesianGrid strokeDasharray="3 3" className="[&>line]:stroke-gray-200 dark:[&>line]:stroke-gray-600" />
+                <XAxis dataKey="time" tick={{ fontSize: 12 }} stroke="#9ca3af" />
+                <YAxis tick={{ fontSize: 12 }} domain={[0, thresholds.rain.danger * 1.2]} stroke="#9ca3af" />
                 <Tooltip />
                 <Legend />
                 
@@ -497,7 +497,7 @@ export default function LiveMonitoring() {
                 <div className="space-y-2">
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-bold">{latestData.riskScore.toFixed(1)}</span>
-                    <span className="text-lg text-gray-500">%</span>
+                    <span className="text-lg text-gray-500 dark:text-gray-400">%</span>
                   </div>
                   <div className={`text-sm font-medium ${
                     latestData.riskState === 'High' ? 'text-red-600' :
@@ -506,7 +506,7 @@ export default function LiveMonitoring() {
                   }`}>
                     {latestData.riskState} Risk
                   </div>
-                  <div className="text-xs text-gray-600">
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
                     Hybrid approach: Z-Score + Thresholds
                   </div>
                 </div>
@@ -529,7 +529,7 @@ export default function LiveMonitoring() {
                       Math.abs(latestData.zScoreTilt)
                     ).toFixed(2)}
                   </div>
-                  <div className="text-xs text-gray-600">
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
                     {Math.max(Math.abs(latestData.zScoreRain), Math.abs(latestData.zScoreSoil), Math.abs(latestData.zScoreTilt)) >= 3 
                       ? '🚨 Critical anomaly detected' 
                       : Math.max(Math.abs(latestData.zScoreRain), Math.abs(latestData.zScoreSoil), Math.abs(latestData.zScoreTilt)) >= 2 
@@ -554,7 +554,7 @@ export default function LiveMonitoring() {
                       hour12: true 
                     })}
                   </div>
-                  <div className="text-xs text-gray-600">
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
                     {new Date(latestData.timestamp).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',

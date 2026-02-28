@@ -54,37 +54,37 @@ export function CommunitySidebar({ isOpen = true, onClose }: CommunitySidebarPro
 
       {/* Sidebar */}
       <div
-        className={`flex flex-col w-64 bg-gradient-to-b from-green-50 to-white transition-transform duration-300 ease-in-out
+        className={`flex flex-col w-64 bg-gradient-to-b from-green-50 to-white dark:from-gray-800 dark:to-gray-800 transition-transform duration-300 ease-in-out
           fixed inset-y-0 left-0 z-50
-          lg:sticky lg:top-0 lg:h-screen lg:border-r lg:border-green-200 lg:shadow-none
+          lg:sticky lg:top-0 lg:h-screen lg:border-r lg:border-green-200 dark:lg:border-gray-700 lg:shadow-none
           h-screen shadow-2xl
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
         onTouchMove={(e) => e.stopPropagation()}
       >
         {/* Logo/Brand */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-green-200">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-green-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-gradient-to-br from-green-500 to-green-700 rounded-lg shadow-md">
               <Mountain className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">Slope Sentry</h1>
-              <p className="text-xs text-green-700 font-medium">Community Monitor</p>
+              <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Slope Sentry</h1>
+              <p className="text-xs text-green-700 dark:text-green-400 font-medium">Community Monitor</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="lg:hidden p-2 hover:bg-green-100 rounded-lg transition-colors"
+            className="lg:hidden p-2 hover:bg-green-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             aria-label="Close sidebar"
           >
-            <X className="h-5 w-5 text-gray-600" />
+            <X className="h-5 w-5 text-gray-600 dark:text-gray-300" />
           </button>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 px-4 py-6">
-          <p className="px-3 mb-2 text-xs font-semibold text-green-700 uppercase tracking-wider">
+          <p className="px-3 mb-2 text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider">
             Dashboard
           </p>
           <div className="space-y-2">
@@ -97,7 +97,7 @@ export function CommunitySidebar({ isOpen = true, onClose }: CommunitySidebarPro
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                     isActive
                       ? "bg-green-600 text-white font-semibold shadow-md"
-                      : "text-gray-700 hover:bg-green-100"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-green-100 dark:hover:bg-gray-700"
                   }`}
                   onClick={onClose}
                 >
@@ -109,14 +109,14 @@ export function CommunitySidebar({ isOpen = true, onClose }: CommunitySidebarPro
           </div>
 
           {/* Community Info Box */}
-          <div className="mt-8 mx-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="mt-8 mx-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
             <div className="flex items-start gap-3">
-              <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
+              <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
               <div>
-                <h3 className="text-sm font-semibold text-blue-900 mb-1">
+                <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-1">
                   Community Access
                 </h3>
-                <p className="text-xs text-blue-700 leading-relaxed">
+                <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
                   You have access to live monitoring data and current status information.
                 </p>
               </div>
@@ -125,8 +125,8 @@ export function CommunitySidebar({ isOpen = true, onClose }: CommunitySidebarPro
         </nav>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-green-200 bg-white">
-          <div className="flex items-center gap-3 text-sm text-gray-600">
+        <div className="px-6 py-4 border-t border-green-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
             <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
             <span className="font-medium">Community Member</span>
           </div>
