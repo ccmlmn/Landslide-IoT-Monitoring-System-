@@ -107,13 +107,21 @@ export function Dashboard({ showZScore = true }: DashboardProps) {
       {/* Risk Status Card */}
       <Card className={`border-2 ${getRiskColor(latestResult.riskState)}`}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className={`flex items-center gap-2 ${
+            latestResult.riskState === "High" ? "text-red-600 dark:text-red-400" :
+            latestResult.riskState === "Moderate" ? "text-yellow-600 dark:text-yellow-400" :
+            "text-green-600 dark:text-green-400"
+          }`}>
             <AlertTriangle className="h-6 w-6" />
             Current Risk Level: {latestResult.riskState}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-4xl font-bold mb-2">
+          <div className={`text-4xl font-bold mb-2 ${
+            latestResult.riskState === "High" ? "text-red-600 dark:text-red-400" :
+            latestResult.riskState === "Moderate" ? "text-yellow-600 dark:text-yellow-400" :
+            "text-green-600 dark:text-green-400"
+          }`}>
             {latestResult.riskScore}%
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400">
