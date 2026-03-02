@@ -103,6 +103,11 @@ http.route({
       // If we have a risk result, save it
       if (riskResult) {
         const timestamp = new Date().toISOString();
+
+        // Check previous risk state BEFORE saving new result
+        // Used to detect High risk transition (only alert when transitioning to High)
+        const previousResult = await ctx.runQuery(api.anomalyResults.getLatest);
+        const previousRiskState = previousResult?.riskState ?? "Low";
         
         await ctx.runMutation(api.sensorData.addAnomalyResult, {
           sensorDataId: id,
@@ -123,6 +128,36 @@ http.route({
 
         // Mark as processed
         await ctx.runMutation(api.sensorData.markAsProcessed, { id });
+
+        // Send Telegram alert when risk transitions INTO High
+        if (riskResult.riskState === "High" && previousRiskState !== "High") {
+          try {
+            // SITE_URL must be set in the Convex dashboard environment variables
+            // e.g. https://your-app.vercel.app (no trailing slash)
+            const siteUrl = process.env.SITE_URL;
+            if (!siteUrl) {
+              console.error("SITE_URL env var not set in Convex dashboard — Telegram alert skipped");
+              throw new Error("SITE_URL not configured");
+            }
+            const alertUrl = `${siteUrl}/api/send-telegram-alert`;
+
+            await fetch(alertUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                riskState: riskResult.riskState,
+                riskScore: riskResult.riskScore,
+                rainValue: rain_value,
+                soilMoisture: soil_moisture,
+                tiltValue: tilt_value,
+                timestamp,
+              }),
+            });
+          } catch (telegramError) {
+            // Don't let Telegram errors affect sensor data response
+            console.error("Telegram alert failed:", telegramError);
+          }
+        }
 
         return new Response(
           JSON.stringify({ 
