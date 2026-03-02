@@ -11,13 +11,34 @@ export const getLatest = query({
   },
 });
 
+// Get latest result for a specific device
+export const getLatestByDevice = query({
+  args: { deviceId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("anomalyResults")
+      .withIndex("by_device", (q) => q.eq("deviceId", args.deviceId))
+      .order("desc")
+      .first();
+  },
+});
+
 // Get all anomaly results for alerts & logs page
 export const getAll = query({
   args: {
     limit: v.optional(v.number()),
+    deviceId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 100;
+    if (args.deviceId) {
+      const results = await ctx.db
+        .query("anomalyResults")
+        .withIndex("by_device", (q) => q.eq("deviceId", args.deviceId))
+        .order("desc")
+        .take(limit);
+      return results;
+    }
     const results = await ctx.db
       .query("anomalyResults")
       .withIndex("by_timestamp")

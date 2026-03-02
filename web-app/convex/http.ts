@@ -12,7 +12,7 @@ http.route({
     try {
       const data = await request.json();
       
-      const { rain_value, soil_moisture, tilt_value } = data;
+      const { device_id, location, rain_value, soil_moisture, tilt_value } = data;
 
       // Validate data
       if (
@@ -31,13 +31,18 @@ http.route({
 
       // Store in Convex
       const id = await ctx.runMutation(api.sensorData.addSensorData, {
+        deviceId: typeof device_id === "string" ? device_id : undefined,
+        location: typeof location === "string" ? location : undefined,
         rainValue: rain_value,
         soilMoisture: soil_moisture,
         tiltValue: tilt_value,
       });
 
-      // Get recent history for anomaly detection
-      const recentData = await ctx.runQuery(api.sensorData.getLatestResults, { limit: 20 });
+      // Get recent history for anomaly detection (per-device if device_id is present)
+      const recentData = await ctx.runQuery(api.sensorData.getLatestResults, {
+        limit: 20,
+        deviceId: typeof device_id === "string" ? device_id : undefined,
+      });
       
       // Build history object from recent data
       const history: { rain: number[], soil: number[], tilt: number[] } = {
@@ -107,6 +112,8 @@ http.route({
         await ctx.runMutation(api.sensorData.addAnomalyResult, {
           sensorDataId: id,
           timestamp: timestamp,
+          deviceId: typeof device_id === "string" ? device_id : undefined,
+          location: typeof location === "string" ? location : undefined,
           rainValue: rain_value,
           soilMoisture: soil_moisture,
           tiltValue: tilt_value,

@@ -5,17 +5,23 @@ export default defineSchema({
   // Raw sensor data from ESP32
   sensorData: defineTable({
     timestamp: v.string(),
+    deviceId: v.optional(v.string()), // e.g. "ESP32-001", "ESP32-002"
+    location: v.optional(v.string()), // e.g. "Site A - Armani Cameron Residence"
     rainValue: v.float64(),
     soilMoisture: v.float64(),
     tiltValue: v.float64(),
     processed: v.boolean(), // Track if Python has processed this
   }).index("by_timestamp", ["timestamp"])
-    .index("by_processed", ["processed"]),
+    .index("by_processed", ["processed"])
+    .index("by_device", ["deviceId"]),
+
 
   // Processed anomaly detection results
   anomalyResults: defineTable({
     sensorDataId: v.id("sensorData"),
     timestamp: v.string(),
+    deviceId: v.optional(v.string()), // e.g. "ESP32-001", "ESP32-002"
+    location: v.optional(v.string()), // e.g. "Site A - Armani Cameron Residence"
     rainValue: v.float64(),
     soilMoisture: v.float64(),
     tiltValue: v.float64(),
@@ -65,7 +71,8 @@ export default defineSchema({
       tilt: v.float64()
     }))
   }).index("by_timestamp", ["timestamp"])
-    .index("by_risk_state", ["riskState"]),
+    .index("by_risk_state", ["riskState"])
+    .index("by_device", ["deviceId"]),
 
   // Community reports
   reports: defineTable({
