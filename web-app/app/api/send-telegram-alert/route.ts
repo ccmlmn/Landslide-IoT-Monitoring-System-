@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       `🚨 <b>LANDSLIDE HIGH RISK ALERT</b> 🚨`,
       ``,
       `⚠️ <b>Risk Level:</b> HIGH`,
-      `📊 <b>Risk Score:</b> ${(riskScore * 100).toFixed(1)}%`,
+      `📊 <b>Risk Score:</b> ${(riskScore).toFixed(1)}%`,
       ``,
       `📍 <b>Location:</b> Site A`,
       ``,
