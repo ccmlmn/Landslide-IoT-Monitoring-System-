@@ -217,6 +217,54 @@ function CommunityDashboard() {
         })}
       </div>
 
+      {/* ── What's Happening Right Now ── */}
+      {(() => {
+        const summaries: { icon: React.ReactNode; text: string; statusKey: string }[] = [];
+
+        const rainRaw = thresholdStatus?.rain;
+        const soilRaw = thresholdStatus?.soil;
+        const tiltRaw = thresholdStatus?.tilt;
+
+        const rainStatus = rainRaw?.status?.toLowerCase() ?? "normal";
+        const soilStatus = soilRaw?.status?.toLowerCase() ?? "normal";
+        const tiltStatus  = tiltRaw?.status?.toLowerCase()  ?? "normal";
+
+        const rainText =
+          rainStatus === "danger"  ? "Heavy rainfall detected — risk of runoff and flooding." :
+          rainStatus === "warning" ? "Moderate rain is falling — monitor conditions closely." :
+                                     "No significant rainfall — conditions are dry.";
+        const soilText =
+          soilStatus === "danger"  ? "Soil is heavily saturated — instability risk is high." :
+          soilStatus === "warning" ? "Soil moisture is elevated — may increase slope risk." :
+                                     "Soil moisture is at a normal level.";
+        const tiltText =
+          tiltStatus === "danger"  ? "Ground movement detected — slope has shifted beyond the safe limit." :
+          tiltStatus === "warning" ? "Slight ground movement noticed — stay cautious." :
+                                     "No unusual ground movement detected.";
+
+        summaries.push({ icon: <CloudRain className="h-5 w-5 shrink-0" />, text: rainText, statusKey: rainStatus });
+        summaries.push({ icon: <Droplets  className="h-5 w-5 shrink-0" />, text: soilText, statusKey: soilStatus });
+        summaries.push({ icon: <Mountain  className="h-5 w-5 shrink-0" />, text: tiltText, statusKey: tiltStatus });
+
+        const colorMap: Record<string, string> = {
+          danger:  "text-red-600 dark:text-red-400",
+          warning: "text-yellow-600 dark:text-yellow-400",
+          normal:  "text-green-600 dark:text-green-400",
+        };
+
+        return (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 px-5 py-4 space-y-3">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">What&apos;s happening right now</p>
+            {summaries.map(({ icon, text, statusKey }, i) => (
+              <div key={i} className={`flex items-start gap-3 ${colorMap[statusKey] ?? colorMap.normal}`}>
+                {icon}
+                <p className="text-sm leading-snug">{text}</p>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* ── Site Map ── */}
       <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-1 pt-2">
         Monitoring Sites
