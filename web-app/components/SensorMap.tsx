@@ -76,11 +76,20 @@ function makeMarkerHtml(color: string): string {
 
 /** Build popup HTML for a node. */
 function makePopupHtml(node: NodeData, color: string): string {
+  const siteName = node.id === "ESP32-001" ? "Site A" : node.id === "ESP32-002" ? "Site B" : node.label;
+
+  // Card background tinted by overall risk — text colours stay neutral
+  const cardBg =
+    node.risk === "High"     ? "#fef2f2" :
+    node.risk === "Moderate" ? "#fefce8" :
+    node.risk === "Low"      ? "#f0fdf4" :
+                               "#f9fafb";
+
   return `
     <div style="font-family:sans-serif;min-width:200px;padding:4px 0">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
         <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></span>
-        <strong style="font-size:14px;color:#111">${node.label}</strong>
+        <strong style="font-size:14px;color:#111">${siteName}</strong>
         <span style="margin-left:auto;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;
                      background:${color}22;color:${color};border:1px solid ${color}55">
           ${node.risk} Risk
@@ -88,21 +97,21 @@ function makePopupHtml(node: NodeData, color: string): string {
       </div>
       <p style="font-size:11px;color:#6b7280;margin:0 0 8px">${node.location}</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px">
-        <div style="background:#f0fdf4;border-radius:6px;padding:6px;text-align:center">
+        <div style="background:${cardBg};border-radius:6px;padding:6px;text-align:center">
           <div style="color:#9ca3af;font-size:10px">Rain</div>
-          <strong>${node.rain !== undefined ? node.rain.toFixed(1) : "\u2014"}</strong>
+          <strong style="color:#111">${node.rain !== undefined ? node.rain.toFixed(1) : "\u2014"}</strong>
         </div>
-        <div style="background:#fef3c7;border-radius:6px;padding:6px;text-align:center">
+        <div style="background:${cardBg};border-radius:6px;padding:6px;text-align:center">
           <div style="color:#9ca3af;font-size:10px">Soil</div>
-          <strong>${node.soil !== undefined ? node.soil.toFixed(1) + "%" : "\u2014"}</strong>
+          <strong style="color:#111">${node.soil !== undefined ? node.soil.toFixed(1) + "%" : "\u2014"}</strong>
         </div>
-        <div style="background:#f5f3ff;border-radius:6px;padding:6px;text-align:center">
+        <div style="background:${cardBg};border-radius:6px;padding:6px;text-align:center">
           <div style="color:#9ca3af;font-size:10px">Tilt</div>
-          <strong>${node.tilt !== undefined ? node.tilt.toFixed(1) + "\u00b0" : "\u2014"}</strong>
+          <strong style="color:#111">${node.tilt !== undefined ? node.tilt.toFixed(1) + "\u00b0" : "\u2014"}</strong>
         </div>
-        <div style="background:#fff7ed;border-radius:6px;padding:6px;text-align:center">
+        <div style="background:${cardBg};border-radius:6px;padding:6px;text-align:center">
           <div style="color:#9ca3af;font-size:10px">Risk Score</div>
-          <strong style="color:${color}">${node.riskScore !== undefined ? node.riskScore.toFixed(1) + "%" : "\u2014"}</strong>
+          <strong style="color:#111">${node.riskScore !== undefined ? node.riskScore.toFixed(1) + "%" : "\u2014"}</strong>
         </div>
       </div>
       ${node.updatedAt

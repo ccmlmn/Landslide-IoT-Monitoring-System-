@@ -224,11 +224,11 @@ function CommunityDashboard() {
               const data = perDevice?.[node.id];
               const risk: string = data?.riskState ?? "Unknown";
               const color = risk === "High" ? "#ef4444" : risk === "Moderate" ? "#f59e0b" : risk === "Low" ? "#22c55e" : "#9ca3af";
+              const siteLabel = node.id === "ESP32-001" ? "Site A" : "Site B";
               return (
                 <div key={node.id} className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ backgroundColor: color }} />
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{node.label}</span>
-                  <span className="text-xs text-gray-400 dark:text-gray-500">{node.location}</span>
+                  <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{siteLabel}</span>
                   <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: color + "22", color }}>
                     {risk}
                   </span>
