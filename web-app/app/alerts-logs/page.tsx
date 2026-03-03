@@ -151,7 +151,7 @@ export default function AlertsLogs() {
 
   const rawResults = useQuery(api.sensorData.getLatestResults, { limit: 100 });
 
-  // Transform data with hardcoded node info (single ESP32 for now)
+  // Transform data using actual deviceId and location from the database
   const alertData: AlertItem[] = useMemo(() => {
     if (!rawResults) return [];
     return rawResults.map((r) => ({
@@ -166,8 +166,8 @@ export default function AlertsLogs() {
         hour12: true,
       }),
       rawTimestamp: r.timestamp,
-      nodeId: "ESP32-001",
-      location: "Sensor A - East Ridge",
+      nodeId: r.deviceId || "Unknown",
+      location: r.location || "Unknown Location",
       tilt: r.tiltValue,
       moisture: r.soilMoisture,
       tiltZ: r.zScoreTilt,
@@ -181,8 +181,19 @@ export default function AlertsLogs() {
   const warningCount = alertData.filter((a) => a.status === "Warning").length;
   const normalCount = alertData.filter((a) => a.status === "Normal").length;
 
-  // Unique node IDs for filters (future-proof for multiple ESP32s)
-  const nodeIds = useMemo(() => [...new Set(alertData.map((a: AlertItem) => a.nodeId))], [alertData]);
+  // Unique nodes for filters — each entry is {id, label} with location
+  const nodeOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    alertData.forEach((a: AlertItem) => {
+      if (!seen.has(a.nodeId)) {
+        seen.set(a.nodeId, a.location);
+      }
+    });
+    return Array.from(seen.entries()).map(([id, location]) => ({
+      id,
+      label: location ? `${id} — ${location}` : id,
+    }));
+  }, [alertData]);
 
   // Apply filters
   const filteredData = useMemo(() => {
@@ -334,9 +345,9 @@ export default function AlertsLogs() {
                     onChange={(e) => setSensorFilter(e.target.value)}
                     className="w-full appearance-none pl-4 pr-10 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
                   >
-                    <option>All Sensors</option>
-                    {nodeIds.map((id) => (
-                      <option key={id} value={id}>{id}</option>
+                    <option value="All Sensors">All Sensors</option>
+                    {nodeOptions.map(({ id, label }) => (
+                      <option key={id} value={id}>{label}</option>
                     ))}
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />

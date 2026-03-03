@@ -6,7 +6,14 @@ import { CommunitySidebar } from "@/components/community/CommunitySidebar";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, Droplets, Gauge, Zap, Activity } from "lucide-react";
+import { TrendingUp, Droplets, Gauge, Zap, Activity, ChevronsUpDown } from "lucide-react";
+
+// Known sensor nodes
+const SENSOR_NODES = [
+  { id: "All", label: "All Nodes", location: "Combined view" },
+  { id: "ESP32-001", label: "ESP32-001", location: "Site A — Armani Cameron Residence" },
+  { id: "ESP32-002", label: "ESP32-002", location: "Site B — Armani Cameron Residence" },
+];
 import {
   LineChart,
   Line,
@@ -24,10 +31,15 @@ import { useUser } from "@clerk/nextjs";
 import { useState } from "react";
 
 export default function LiveMonitoring() {
-  const latestData = useQuery(api.sensorData.getLatestResult);
-  const recentData = useQuery(api.sensorData.getLatestResults, { limit: 30 });
+  const [selectedDevice, setSelectedDevice] = useState<string>("All");
+  const deviceFilter = selectedDevice !== "All" ? { deviceId: selectedDevice } : {};
+
+  const latestData = useQuery(api.sensorData.getLatestResult, deviceFilter);
+  const recentData = useQuery(api.sensorData.getLatestResults, { limit: 30, ...deviceFilter });
   const { user } = useUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const activeNode = SENSOR_NODES.find((n) => n.id === selectedDevice) ?? SENSOR_NODES[0];
   
   // Get user role from Clerk metadata, default to "community"
   const userRole = (user?.publicMetadata?.role as string) || "community";
@@ -45,12 +57,26 @@ export default function LiveMonitoring() {
     return (
       <AppLayout sidebar={sidebar} onMenuClick={() => setSidebarOpen(true)}>
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Live Sensor Monitoring</h1>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">Live Sensor Monitoring</h1>
               <p className="text-gray-600 dark:text-gray-400">Real-time sensor data with detailed analytics</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative">
+                <select
+                  value={selectedDevice}
+                  onChange={(e) => setSelectedDevice(e.target.value)}
+                  className="appearance-none pl-3 pr-9 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm"
+                >
+                  {SENSOR_NODES.map((node) => (
+                    <option key={node.id} value={node.id}>
+                      {node.id === "All" ? "All Nodes" : `${node.label} — ${node.location}`}
+                    </option>
+                  ))}
+                </select>
+                <ChevronsUpDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              </div>
               <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-4 py-2 rounded-lg">
                 <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                 <span className="text-sm font-medium">Live</span>
@@ -130,12 +156,29 @@ export default function LiveMonitoring() {
     <AppLayout sidebar={sidebar} onMenuClick={() => setSidebarOpen(true)}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Live Sensor Monitoring</h1>
-            <p className="text-gray-600 dark:text-gray-400">Real-time sensor data with detailed analytics</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">Live Sensor Monitoring</h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              {activeNode.id === "All" ? "Real-time sensor data — all nodes" : `${activeNode.label} · ${activeNode.location}`}
+            </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Node selector */}
+            <div className="relative">
+              <select
+                value={selectedDevice}
+                onChange={(e) => setSelectedDevice(e.target.value)}
+                className="appearance-none pl-3 pr-9 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-sm"
+              >
+                {SENSOR_NODES.map((node) => (
+                  <option key={node.id} value={node.id}>
+                    {node.id === "All" ? "All Nodes" : `${node.label} — ${node.location}`}
+                  </option>
+                ))}
+              </select>
+              <ChevronsUpDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            </div>
             <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-4 py-2 rounded-lg">
               <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
               <span className="text-sm font-medium">Live</span>

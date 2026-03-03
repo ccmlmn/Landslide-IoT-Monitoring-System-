@@ -4,8 +4,15 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, Droplets, Mountain, Activity } from "lucide-react";
+import { AlertTriangle, Droplets, Mountain, Activity, ChevronsUpDown } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+// Known sensor nodes
+const SENSOR_NODES = [
+  { id: "All", label: "All Nodes", location: "Combined view" },
+  { id: "ESP32-001", label: "ESP32-001", location: "Site A — Armani Cameron Residence" },
+  { id: "ESP32-002", label: "ESP32-002", location: "Site B — Armani Cameron Residence" },
+];
 
 function DashboardSkeleton() {
   return (
@@ -71,9 +78,14 @@ interface DashboardProps {
 }
 
 export function Dashboard({ showZScore = true }: DashboardProps) {
-  const latestResult = useQuery(api.sensorData.getLatestResult);
-  const history = useQuery(api.sensorData.getLatestResults, { limit: 10 });
+  const [selectedDevice, setSelectedDevice] = useState<string>("All");
   const [chartFilter, setChartFilter] = useState<'all' | 'rain' | 'soil' | 'tilt'>('all');
+
+  const deviceFilter = selectedDevice !== "All" ? { deviceId: selectedDevice } : {};
+  const latestResult = useQuery(api.sensorData.getLatestResult, deviceFilter);
+  const history = useQuery(api.sensorData.getLatestResults, { limit: 10, ...deviceFilter });
+
+  const activeNode = SENSOR_NODES.find((n) => n.id === selectedDevice) ?? SENSOR_NODES[0];
 
   if (!latestResult) {
     return <DashboardSkeleton />;
@@ -104,6 +116,31 @@ export function Dashboard({ showZScore = true }: DashboardProps) {
 
   return (
     <div className="space-y-6">
+      {/* Node / Device Selector */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3 shadow-sm">
+        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 font-medium">
+          <Activity className="h-4 w-4" />
+          <span>Viewing:</span>
+          <span className="font-semibold text-gray-900 dark:text-gray-100">
+            {activeNode.id === "All" ? "All Nodes" : `${activeNode.label} · ${activeNode.location}`}
+          </span>
+        </div>
+        <div className="relative">
+          <select
+            value={selectedDevice}
+            onChange={(e) => setSelectedDevice(e.target.value)}
+            className="appearance-none pl-3 pr-9 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
+          >
+            {SENSOR_NODES.map((node) => (
+              <option key={node.id} value={node.id}>
+                {node.id === "All" ? "All Nodes" : `${node.label} — ${node.location}`}
+              </option>
+            ))}
+          </select>
+          <ChevronsUpDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+        </div>
+      </div>
+
       {/* Risk Status Card */}
       <Card className={`border-2 ${getRiskColor(latestResult.riskState)}`}>
         <CardHeader>
