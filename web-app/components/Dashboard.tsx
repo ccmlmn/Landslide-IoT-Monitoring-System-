@@ -426,7 +426,7 @@ export function Dashboard({ showZScore = true, isAdmin = true }: DashboardProps)
       </Card>
 
       {/* Sensor Values Grid */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Rain Value</CardTitle>
@@ -517,7 +517,8 @@ export function Dashboard({ showZScore = true, isAdmin = true }: DashboardProps)
           </div>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
+          <div className="h-[260px] sm:h-[400px]">
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" className="[&>line]:stroke-gray-200 dark:[&>line]:stroke-gray-600" />
               <XAxis 
@@ -593,6 +594,7 @@ export function Dashboard({ showZScore = true, isAdmin = true }: DashboardProps)
               />
             </LineChart>
           </ResponsiveContainer>
+          </div>
           
           {/* Risk Status Legend */}
           <div className="mt-6 flex flex-wrap gap-3 justify-center">
