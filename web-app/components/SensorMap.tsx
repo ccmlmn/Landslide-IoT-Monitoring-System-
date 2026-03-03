@@ -207,6 +207,7 @@ export default function SensorMap({ nodes }: SensorMapProps) {
   useEffect(() => {
     if (!mapInstanceRef.current || !layerGroupRef.current) return;
     import("leaflet").then((L) => {
+      if (!layerGroupRef.current) return;
       renderMarkers(L, layerGroupRef.current, nodes);
     });
   }, [nodes]);

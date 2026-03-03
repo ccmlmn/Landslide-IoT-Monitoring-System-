@@ -107,7 +107,8 @@ function CommunityDashboard() {
     );
   }
 
-  const { riskState, riskScore, timestamp, thresholdStatus } = latestResult;
+  const { riskState, riskScore, timestamp, thresholdStatus, deviceId } = latestResult;
+  const siteName = deviceId === "ESP32-001" ? "Site A" : deviceId === "ESP32-002" ? "Site B" : deviceId ?? "Unknown Site";
 
   const riskConfig: Record<string, { bg: string; border: string; text: string; icon: React.ReactNode; heading: string; sub: string }> = {
     High: {
@@ -185,7 +186,10 @@ function CommunityDashboard() {
         <div>
           <p className={`text-2xl font-extrabold leading-tight ${cfg.text}`}>{cfg.heading}</p>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{cfg.sub}</p>
-          <p className="mt-2 text-xs text-gray-400">Last updated: {time}</p>
+          <p className="mt-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+            Risk reported from <span className="font-bold">{siteName}</span>
+          </p>
+          <p className="mt-1 text-xs text-gray-400">Last updated: {time}</p>
         </div>
       </div>
 
