@@ -153,10 +153,22 @@ function CommunityDashboard() {
     { key: "tilt", label: "Ground Movement", icon: <Mountain className="h-6 w-6 text-purple-500" />, desc: "Tilt / slope displacement of the ground" },
   ];
 
-  const statusStyle: Record<string, { badge: string; label: string }> = {
-    normal:  { badge: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300", label: "Normal" },
-    warning: { badge: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300", label: "Warning" },
-    danger:  { badge: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300", label: "Danger" },
+  const statusStyle: Record<string, { badge: string; card: string; label: string }> = {
+    normal:  {
+      badge: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+      card: "border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10",
+      label: "Safe",
+    },
+    warning: {
+      badge: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
+      card: "border-yellow-200 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-900/10",
+      label: "Caution",
+    },
+    danger:  {
+      badge: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+      card: "border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10",
+      label: "Danger",
+    },
   };
 
   const time = new Date(timestamp).toLocaleString("en-MY", {
@@ -166,107 +178,98 @@ function CommunityDashboard() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* ── Risk Banner ── */}
-      <div className={`rounded-2xl border-2 ${cfg.bg} ${cfg.border} p-6 flex flex-col sm:flex-row items-center gap-5`}>
+      <div className={`rounded-2xl border-2 ${cfg.bg} ${cfg.border} p-5 flex items-center gap-4`}>
         <div className="shrink-0">{cfg.icon}</div>
-        <div className="text-center sm:text-left">
-          <p className={`text-2xl font-extrabold ${cfg.text}`}>{cfg.heading}</p>
+        <div>
+          <p className={`text-2xl font-extrabold leading-tight ${cfg.text}`}>{cfg.heading}</p>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{cfg.sub}</p>
-          <p className="mt-3 text-xs text-gray-400">Last updated: {time}</p>
+          <p className="mt-2 text-xs text-gray-400">Last updated: {time}</p>
         </div>
       </div>
 
-      {/* ── Sensor Status Cards ── */}
-      <div>
-        <h2 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-3">Sensor Conditions</h2>
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-          {sensorConfig.map(({ key, label, icon, desc }) => {
-            const raw = thresholdStatus?.[key];
-            const statusKey: string = raw?.status?.toLowerCase() ?? "normal";
-            const style = statusStyle[statusKey] ?? statusStyle["normal"];
-            const levelLabel = raw?.level ?? "Normal";
-            return (
-              <Card key={key} className="rounded-2xl shadow-sm">
-                <CardContent className="pt-5 pb-4 px-5 flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {icon}
-                      <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{label}</span>
-                    </div>
-                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${style.badge}`}>
-                      {levelLabel || style.label}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{desc}</p>
-                  {raw?.message && (
-                    <p className="text-xs italic text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-2">
-                      {raw.message}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+      {/* ── Sensor Condition Cards ── */}
+      <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-1">
+        Sensor Conditions
+      </h2>
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+        {sensorConfig.map(({ key, label, icon, desc }) => {
+          const raw = thresholdStatus?.[key];
+          const statusKey: string = raw?.status?.toLowerCase() ?? "normal";
+          const style = statusStyle[statusKey] ?? statusStyle["normal"];
+          return (
+            <div key={key} className={`rounded-2xl border-2 ${style.card} px-5 py-4 flex flex-col gap-2`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {icon}
+                  <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{label}</span>
+                </div>
+                <span className={`text-xs font-bold px-3 py-1 rounded-full ${style.badge}`}>
+                  {style.label}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                {raw?.message ?? desc}
+              </p>
+            </div>
+          );
+        })}
       </div>
 
       {/* ── Site Map ── */}
-      <div>
-        <h2 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-green-600" />
-          Monitoring Sites
-        </h2>
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-          {/* site legend */}
-          <div className="flex flex-wrap items-center gap-4 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-            {SENSOR_NODES.filter((n) => n.id !== "All").map((node) => {
+      <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-1 pt-2">
+        Monitoring Sites
+      </h2>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        {/* site legend */}
+        <div className="flex flex-wrap items-center gap-4 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+          {SENSOR_NODES.filter((n) => n.id !== "All").map((node) => {
+            const data = perDevice?.[node.id];
+            const risk: string = data?.riskState ?? "Unknown";
+            const color = risk === "High" ? "#ef4444" : risk === "Moderate" ? "#f59e0b" : risk === "Low" ? "#22c55e" : "#9ca3af";
+            const siteLabel = node.id === "ESP32-001" ? "Site A" : "Site B";
+            return (
+              <div key={node.id} className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ backgroundColor: color }} />
+                <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{siteLabel}</span>
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: color + "22", color }}>
+                  {risk}
+                </span>
+              </div>
+            );
+          })}
+          <div className="ml-auto text-xs text-gray-400 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-ping inline-block" />
+            Live
+          </div>
+        </div>
+        <div style={{ height: 360 }}>
+          <SensorMap
+            nodes={SENSOR_NODES.filter((n) => n.id !== "All").map((node) => {
               const data = perDevice?.[node.id];
-              const risk: string = data?.riskState ?? "Unknown";
-              const color = risk === "High" ? "#ef4444" : risk === "Moderate" ? "#f59e0b" : risk === "Low" ? "#22c55e" : "#9ca3af";
-              const siteLabel = node.id === "ESP32-001" ? "Site A" : "Site B";
-              return (
-                <div key={node.id} className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ backgroundColor: color }} />
-                  <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{siteLabel}</span>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: color + "22", color }}>
-                    {risk}
-                  </span>
-                </div>
-              );
+              return {
+                id: node.id,
+                label: node.label,
+                location: node.location,
+                lat: node.id === "ESP32-001" ? 4.4715 : 4.4698,
+                lng: node.id === "ESP32-001" ? 101.3762 : 101.3779,
+                risk: data?.riskState ?? "Unknown",
+                riskScore: data?.riskScore,
+                tilt: data?.tiltValue,
+                soil: data?.soilMoisture,
+                rain: data?.rainValue,
+                updatedAt: data
+                  ? new Date(data.timestamp).toLocaleTimeString("en-US", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                      hour12: true,
+                    })
+                  : undefined,
+              };
             })}
-            <div className="ml-auto text-xs text-gray-400 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-ping inline-block" />
-              Live
-            </div>
-          </div>
-          <div style={{ height: 360 }}>
-            <SensorMap
-              nodes={SENSOR_NODES.filter((n) => n.id !== "All").map((node) => {
-                const data = perDevice?.[node.id];
-                return {
-                  id: node.id,
-                  label: node.label,
-                  location: node.location,
-                  lat: node.id === "ESP32-001" ? 4.4715 : 4.4698,
-                  lng: node.id === "ESP32-001" ? 101.3762 : 101.3779,
-                  risk: data?.riskState ?? "Unknown",
-                  riskScore: data?.riskScore,
-                  tilt: data?.tiltValue,
-                  soil: data?.soilMoisture,
-                  rain: data?.rainValue,
-                  updatedAt: data
-                    ? new Date(data.timestamp).toLocaleTimeString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                        hour12: true,
-                      })
-                    : undefined,
-                };
-              })}
-            />
-          </div>
+          />
         </div>
       </div>
     </div>
