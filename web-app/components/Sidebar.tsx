@@ -104,7 +104,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                     isActive
                       ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
-                  }`
+                  }`}
                 >
                   <item.icon className="h-5 w-5" />
                   {item.name}
