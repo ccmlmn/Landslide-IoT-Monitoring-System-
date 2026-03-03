@@ -168,7 +168,9 @@ export default function LiveMonitoring() {
           {/* Site A & Site B cards — side by side */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {siteData.map(({ site, siteLabel, location }) => {
-              const ts = site.thresholdStatus ?? {};
+              type TSEntry = { status: string; level: string; message: string };
+              type TS = { tilt?: TSEntry; soil?: TSEntry; rain?: TSEntry };
+              const ts: TS = (site.thresholdStatus as TS) ?? {};
               const tiltS  = ts.tilt  ?? defaultThresholdStatus;
               const soilS  = ts.soil  ?? defaultThresholdStatus;
               const rainS  = ts.rain  ?? defaultThresholdStatus;
