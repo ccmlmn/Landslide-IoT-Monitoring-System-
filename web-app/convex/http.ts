@@ -158,6 +158,8 @@ http.route({
                 soilMoisture: soil_moisture,
                 tiltValue: tilt_value,
                 timestamp,
+                location: typeof location === "string" ? location : undefined,
+                deviceId: typeof device_id === "string" ? device_id : undefined,
               }),
             });
           } catch (telegramError) {
