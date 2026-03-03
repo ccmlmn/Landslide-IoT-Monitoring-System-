@@ -1,11 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, Droplets, Mountain, Activity, ChevronsUpDown } from "lucide-react";
+import { AlertTriangle, Droplets, Mountain, Activity, ChevronsUpDown, MapPin } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+const SensorMap = dynamic(() => import("@/components/SensorMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-2xl">
+      <div className="text-sm text-gray-400 animate-pulse">Loading map...</div>
+    </div>
+  ),
+});
 
 // Known sensor nodes
 const SENSOR_NODES = [
@@ -84,6 +94,7 @@ export function Dashboard({ showZScore = true }: DashboardProps) {
   const deviceFilter = selectedDevice !== "All" ? { deviceId: selectedDevice } : {};
   const latestResult = useQuery(api.sensorData.getLatestResult, deviceFilter);
   const history = useQuery(api.sensorData.getLatestResults, { limit: 10, ...deviceFilter });
+  const perDevice = useQuery(api.sensorData.getLatestResultPerDevice);
 
   const activeNode = SENSOR_NODES.find((n) => n.id === selectedDevice) ?? SENSOR_NODES[0];
 
@@ -354,6 +365,71 @@ export function Dashboard({ showZScore = true }: DashboardProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Sensor Location Map */}
+      <div>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+          <MapPin className="h-5 w-5 text-green-600" />
+          Sensor Locations
+        </h2>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          {/* Legend bar */}
+          <div className="flex flex-wrap items-center gap-4 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+            {SENSOR_NODES.filter((n) => n.id !== "All").map((node) => {
+              const data = perDevice?.[node.id];
+              const risk: string = data?.riskState ?? "Unknown";
+              const color =
+                risk === "High" ? "#ef4444" :
+                risk === "Moderate" ? "#f59e0b" :
+                risk === "Low" ? "#22c55e" : "#9ca3af";
+              return (
+                <div key={node.id} className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ backgroundColor: color }} />
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{node.label}</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">{node.location}</span>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: color + "22", color }}>
+                    {risk}
+                  </span>
+                </div>
+              );
+            })}
+            <div className="ml-auto text-xs text-gray-400 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-ping inline-block" />
+              Live
+            </div>
+          </div>
+
+          {/* Map */}
+          <div style={{ height: 420 }}>
+            <SensorMap
+              nodes={SENSOR_NODES.filter((n) => n.id !== "All").map((node) => {
+                const data = perDevice?.[node.id];
+                return {
+                  id: node.id,
+                  label: node.label,
+                  location: node.location,
+                  lat: node.id === "ESP32-001" ? 4.4715 : 4.4698,
+                  lng: node.id === "ESP32-001" ? 101.3762 : 101.3779,
+                  risk: data?.riskState ?? "Unknown",
+                  riskScore: data?.riskScore,
+                  tilt: data?.tiltValue,
+                  soil: data?.soilMoisture,
+                  rain: data?.rainValue,
+                  updatedAt: data
+                    ? new Date(data.timestamp).toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: true,
+                      })
+                    : undefined,
+                };
+              })}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
+
