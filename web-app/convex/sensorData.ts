@@ -4,6 +4,8 @@ import { mutation, query } from "./_generated/server";
 // Add new sensor data from ESP32
 export const addSensorData = mutation({
   args: {
+    deviceId: v.optional(v.string()),
+    location: v.optional(v.string()),
     rainValue: v.float64(),
     soilMoisture: v.float64(),
     tiltValue: v.float64(),
@@ -13,6 +15,8 @@ export const addSensorData = mutation({
     
     const id = await ctx.db.insert("sensorData", {
       timestamp,
+      deviceId: args.deviceId,
+      location: args.location,
       rainValue: args.rainValue,
       soilMoisture: args.soilMoisture,
       tiltValue: args.tiltValue,
@@ -51,6 +55,8 @@ export const addAnomalyResult = mutation({
   args: {
     sensorDataId: v.id("sensorData"),
     timestamp: v.string(),
+    deviceId: v.optional(v.string()),
+    location: v.optional(v.string()),
     rainValue: v.float64(),
     soilMoisture: v.float64(),
     tiltValue: v.float64(),
@@ -104,6 +110,8 @@ export const addAnomalyResult = mutation({
     const id = await ctx.db.insert("anomalyResults", {
       sensorDataId: args.sensorDataId,
       timestamp: args.timestamp,
+      deviceId: args.deviceId,
+      location: args.location,
       rainValue: args.rainValue,
       soilMoisture: args.soilMoisture,
       tiltValue: args.tiltValue,
@@ -125,15 +133,25 @@ export const addAnomalyResult = mutation({
 export const getLatestResults = query({
   args: {
     limit: v.optional(v.number()),
+    deviceId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 50;
     
-    const results = await ctx.db
-      .query("anomalyResults")
-      .withIndex("by_timestamp")
-      .order("desc")
-      .take(limit);
+    let results;
+    if (args.deviceId) {
+      results = await ctx.db
+        .query("anomalyResults")
+        .withIndex("by_device", (q) => q.eq("deviceId", args.deviceId))
+        .order("desc")
+        .take(limit);
+    } else {
+      results = await ctx.db
+        .query("anomalyResults")
+        .withIndex("by_timestamp")
+        .order("desc")
+        .take(limit);
+    }
     
     return results;
   },
@@ -141,8 +159,18 @@ export const getLatestResults = query({
 
 // Get latest single result
 export const getLatestResult = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    deviceId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    if (args.deviceId) {
+      const result = await ctx.db
+        .query("anomalyResults")
+        .withIndex("by_device", (q) => q.eq("deviceId", args.deviceId))
+        .order("desc")
+        .first();
+      return result;
+    }
     const result = await ctx.db
       .query("anomalyResults")
       .withIndex("by_timestamp")
@@ -150,6 +178,24 @@ export const getLatestResult = query({
       .first();
     
     return result;
+  },
+});
+
+// Get the latest result for EACH device (for map overview)
+export const getLatestResultPerDevice = query({
+  args: {},
+  handler: async (ctx) => {
+    const deviceIds = ["ESP32-001", "ESP32-002"];
+    const results: Record<string, any> = {};
+    for (const deviceId of deviceIds) {
+      const result = await ctx.db
+        .query("anomalyResults")
+        .withIndex("by_device", (q) => q.eq("deviceId", deviceId))
+        .order("desc")
+        .first();
+      results[deviceId] = result ?? null;
+    }
+    return results;
   },
 });
 

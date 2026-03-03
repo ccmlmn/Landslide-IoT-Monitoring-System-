@@ -13,6 +13,8 @@ import {
   X,
   Eye,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useQuery } from "convex/react";
@@ -142,16 +144,19 @@ function AlertDetailModal({
   );
 }
 
+const PAGE_SIZE = 10;
+
 export default function AlertsLogs() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [sensorFilter, setSensorFilter] = useState("All Sensors");
   const [selectedAlert, setSelectedAlert] = useState<AlertItem | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const rawResults = useQuery(api.sensorData.getLatestResults, { limit: 100 });
 
-  // Transform data with hardcoded node info (single ESP32 for now)
+  // Transform data using actual deviceId and location from the database
   const alertData: AlertItem[] = useMemo(() => {
     if (!rawResults) return [];
     return rawResults.map((r) => ({
@@ -166,8 +171,8 @@ export default function AlertsLogs() {
         hour12: true,
       }),
       rawTimestamp: r.timestamp,
-      nodeId: "ESP32-001",
-      location: "Sensor A - East Ridge",
+      nodeId: r.deviceId || "Unknown",
+      location: r.location || "Unknown Location",
       tilt: r.tiltValue,
       moisture: r.soilMoisture,
       tiltZ: r.zScoreTilt,
@@ -181,11 +186,23 @@ export default function AlertsLogs() {
   const warningCount = alertData.filter((a) => a.status === "Warning").length;
   const normalCount = alertData.filter((a) => a.status === "Normal").length;
 
-  // Unique node IDs for filters (future-proof for multiple ESP32s)
-  const nodeIds = useMemo(() => [...new Set(alertData.map((a: AlertItem) => a.nodeId))], [alertData]);
+  // Unique nodes for filters — each entry is {id, label} with location
+  const nodeOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    alertData.forEach((a: AlertItem) => {
+      if (!seen.has(a.nodeId)) {
+        seen.set(a.nodeId, a.location);
+      }
+    });
+    return Array.from(seen.entries()).map(([id, location]) => ({
+      id,
+      label: location ? `${id} — ${location}` : id,
+    }));
+  }, [alertData]);
 
-  // Apply filters
+  // Apply filters (resets page when any filter changes)
   const filteredData = useMemo(() => {
+    setCurrentPage(1);
     return alertData.filter((a) => {
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -198,6 +215,9 @@ export default function AlertsLogs() {
       return true;
     });
   }, [alertData, searchQuery, statusFilter, sensorFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / PAGE_SIZE));
+  const pagedData = filteredData.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   // Export to CSV
   const handleExport = () => {
@@ -222,6 +242,7 @@ export default function AlertsLogs() {
     setSearchQuery("");
     setStatusFilter("All Status");
     setSensorFilter("All Sensors");
+    setCurrentPage(1);
   };
 
   const isLoading = rawResults === undefined;
@@ -334,9 +355,9 @@ export default function AlertsLogs() {
                     onChange={(e) => setSensorFilter(e.target.value)}
                     className="w-full appearance-none pl-4 pr-10 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
                   >
-                    <option>All Sensors</option>
-                    {nodeIds.map((id) => (
-                      <option key={id} value={id}>{id}</option>
+                    <option value="All Sensors">All Sensors</option>
+                    {nodeOptions.map(({ id, label }) => (
+                      <option key={id} value={id}>{label}</option>
                     ))}
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
@@ -355,9 +376,33 @@ export default function AlertsLogs() {
 
           {/* Alert Logs */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-            <div className="px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Alert Logs</h2>
-              <span className="text-sm text-gray-500 dark:text-gray-400">{filteredData.length} records</span>
+            <div className="px-4 sm:px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Alert Logs</h2>
+                <span className="text-sm text-gray-500 dark:text-gray-400">{filteredData.length} records</span>
+              </div>
+              {/* Pagination controls */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  title="Previous page"
+                >
+                  <ChevronLeft className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  title="Next page"
+                >
+                  <ChevronRight className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                </button>
+              </div>
             </div>
 
             {isLoading ? (
@@ -378,7 +423,7 @@ export default function AlertsLogs() {
               <>
                 {/* ===== MOBILE CARD VIEW (< sm) ===== */}
                 <div className="sm:hidden divide-y divide-gray-100 dark:divide-gray-700">
-                  {filteredData.map((alert) => (
+                  {pagedData.map((alert) => (
                     <div key={alert._id} className="p-4 space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
@@ -435,7 +480,7 @@ export default function AlertsLogs() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
-                      {filteredData.map((alert) => (
+                      {pagedData.map((alert) => (
                         <tr key={alert._id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors">
                           <td className="px-6 py-4 text-gray-700 dark:text-gray-300 whitespace-nowrap">{alert.timestamp}</td>
                           <td className="px-6 py-4 text-gray-700 dark:text-gray-300 font-medium whitespace-nowrap">{alert.nodeId}</td>

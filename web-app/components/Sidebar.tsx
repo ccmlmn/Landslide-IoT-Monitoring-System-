@@ -58,38 +58,38 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
       {/* Sidebar */}
       <div
-        className={`flex flex-col w-64 bg-white transition-transform duration-300 ease-in-out
+        className={`flex flex-col w-64 bg-white dark:bg-gray-800 transition-transform duration-300 ease-in-out
           fixed inset-y-0 left-0 z-50
-          lg:sticky lg:top-0 lg:h-screen lg:border-r lg:border-gray-200 lg:shadow-none
+          lg:sticky lg:top-0 lg:h-screen lg:border-r lg:border-gray-200 dark:lg:border-gray-700 lg:shadow-none
           h-screen shadow-2xl
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
         onTouchMove={(e) => e.stopPropagation()}
       >
         {/* Logo/Brand */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-gradient-to-br from-green-500 to-green-700 rounded-lg shadow-md">
               <Mountain className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">Slope Sentry</h1>
-              <p className="text-xs text-gray-500">IoT Monitor</p>
+              <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Slope Sentry</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">IoT Monitor</p>
             </div>
           </div>
           {/* Close button for mobile */}
           <button
             onClick={onClose}
-            className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             aria-label="Close sidebar"
           >
-            <X className="h-5 w-5 text-gray-600" />
+            <X className="h-5 w-5 text-gray-600 dark:text-gray-300" />
           </button>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 px-4 py-6">
-          <p className="px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          <p className="px-3 mb-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
             Navigation
           </p>
           <div className="space-y-1">
@@ -102,8 +102,8 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   onClick={onClose}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     isActive
-                      ? "bg-gray-100 text-gray-900"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
                   }`}
                 >
                   <item.icon className="h-5 w-5" />

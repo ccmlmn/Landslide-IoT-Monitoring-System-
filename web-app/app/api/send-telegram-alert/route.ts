@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { riskState, riskScore, rainValue, soilMoisture, tiltValue, timestamp } = body;
+    const { riskState, riskScore, rainValue, soilMoisture, tiltValue, timestamp, location, deviceId } = body;
 
     const time = timestamp
       ? new Date(timestamp).toLocaleString("en-MY", {
@@ -28,17 +28,33 @@ export async function POST(req: NextRequest) {
           timeStyle: "short",
         });
 
+    // Determine affected site and evacuation site dynamically
+    const locationStr: string = location ?? "Unknown Location";
+    let affectedSite = locationStr;
+    let evacuateTo = "a safe location";
+
+    const siteAMatch = /site\s*a/i.test(locationStr);
+    const siteBMatch = /site\s*b/i.test(locationStr);
+
+    if (siteAMatch) {
+      affectedSite = "Site A";
+      evacuateTo = "Site B";
+    } else if (siteBMatch) {
+      affectedSite = "Site B";
+      evacuateTo = "Site A";
+    }
+
     const message = [
       `🚨 <b>LANDSLIDE HIGH RISK ALERT</b> 🚨`,
       ``,
       `⚠️ <b>Risk Level:</b> HIGH`,
       `📊 <b>Risk Score:</b> ${(riskScore).toFixed(1)}%`,
       ``,
-      `📍 <b>Location:</b> Site A`,
+      `📍 <b>Location:</b> ${affectedSite}`,
       ``,
       `🕒 <b>Time (MYT):</b> ${time}`,
       ``,
-      `⚡ Immediate action may be required! Please evacuate to Site B to ensure safety.`,
+      `⚡ Immediate action may be required! Please evacuate to ${evacuateTo} to ensure safety.`,
     ].join("\n");
 
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;

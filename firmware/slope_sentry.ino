@@ -20,6 +20,8 @@
 const char *WIFI_SSID = "your wifi name";                                         // <--- ENTER WIFI NAME
 const char *WIFI_PASSWORD = "your wifi password";                                 // <--- ENTER WIFI PASSWORD
 const char *SERVER_URL = "https://your-development-site.convex.site/sensor-data"; // <--- ENTER CONVEX URL
+const char *DEVICE_ID = "ESP32-001";                                              // <--- CHANGE TO "ESP32-002" for the second unit
+const char *LOCATION = "Site A - Armani Cameron Residence";                       // <-- Change to Site B - Armani Cameron Residence (second unit)
 
 // --- PIN DEFINITIONS ---
 const int PIN_RAIN_ANALOG = 34;  // Analog data (0-100%)
@@ -160,7 +162,9 @@ void loop()
 
     // Create JSON Payload
     // keys match your Convex Database Screenshot
-    StaticJsonDocument<200> doc;
+    StaticJsonDocument<256> doc;
+    doc["location"] = LOCATION;
+    doc["device_id"] = DEVICE_ID;
     doc["rain_value"] = rainValue;
     doc["soil_moisture"] = soilValue;
     doc["tilt_value"] = tiltValue;
