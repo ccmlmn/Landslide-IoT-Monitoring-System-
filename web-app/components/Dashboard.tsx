@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, Droplets, Mountain, Activity, ChevronsUpDown, MapPin } from "lucide-react";
+import { AlertTriangle, Droplets, Mountain, Activity, ChevronsUpDown, MapPin, ShieldCheck, ShieldAlert, ShieldOff, CloudRain } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const SensorMap = dynamic(() => import("@/components/SensorMap"), {
@@ -85,11 +85,203 @@ function DashboardSkeleton() {
 
 interface DashboardProps {
   showZScore?: boolean;
+  isAdmin?: boolean;
 }
 
-export function Dashboard({ showZScore = true }: DashboardProps) {
+// ─── Community-focused simplified dashboard ───────────────────────────────────
+function CommunityDashboard() {
+  const latestResult = useQuery(api.sensorData.getLatestResult, {});
+  const perDevice = useQuery(api.sensorData.getLatestResultPerDevice);
+
+  if (!latestResult) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded-2xl" />
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-2xl" />
+          ))}
+        </div>
+        <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-2xl" />
+      </div>
+    );
+  }
+
+  const { riskState, riskScore, timestamp, thresholdStatus } = latestResult;
+
+  const riskConfig: Record<string, { bg: string; border: string; text: string; icon: React.ReactNode; heading: string; sub: string }> = {
+    High: {
+      bg: "bg-red-50 dark:bg-red-900/30",
+      border: "border-red-300 dark:border-red-700",
+      text: "text-red-700 dark:text-red-300",
+      icon: <ShieldOff className="h-12 w-12 text-red-600 dark:text-red-400" />,
+      heading: "⚠️ HIGH RISK — Take Action Now",
+      sub: "A high landslide risk has been detected. Please follow evacuation instructions immediately.",
+    },
+    Moderate: {
+      bg: "bg-yellow-50 dark:bg-yellow-900/30",
+      border: "border-yellow-300 dark:border-yellow-700",
+      text: "text-yellow-700 dark:text-yellow-300",
+      icon: <ShieldAlert className="h-12 w-12 text-yellow-600 dark:text-yellow-400" />,
+      heading: "⚡ MODERATE RISK — Stay Alert",
+      sub: "Conditions are elevated. Monitor updates closely and be ready to evacuate if needed.",
+    },
+    Low: {
+      bg: "bg-green-50 dark:bg-green-900/30",
+      border: "border-green-300 dark:border-green-700",
+      text: "text-green-700 dark:text-green-300",
+      icon: <ShieldCheck className="h-12 w-12 text-green-600 dark:text-green-400" />,
+      heading: "✅ LOW RISK — All Clear",
+      sub: "Conditions are currently normal. No immediate action is required.",
+    },
+  };
+
+  const cfg = riskConfig[riskState] ?? {
+    bg: "bg-gray-50 dark:bg-gray-800",
+    border: "border-gray-200 dark:border-gray-700",
+    text: "text-gray-700 dark:text-gray-300",
+    icon: <Activity className="h-12 w-12 text-gray-400" />,
+    heading: "Initializing…",
+    sub: "Waiting for first sensor reading.",
+  };
+
+  // Sensor status helpers
+  type SensorKey = "rain" | "soil" | "tilt";
+  const sensorConfig: { key: SensorKey; label: string; icon: React.ReactNode; desc: string }[] = [
+    { key: "rain", label: "Rainfall", icon: <CloudRain className="h-6 w-6 text-blue-500" />, desc: "Amount of rainfall detected by the sensor" },
+    { key: "soil", label: "Soil Moisture", icon: <Droplets className="h-6 w-6 text-amber-500" />, desc: "Water content in the surrounding soil" },
+    { key: "tilt", label: "Ground Movement", icon: <Mountain className="h-6 w-6 text-purple-500" />, desc: "Tilt / slope displacement of the ground" },
+  ];
+
+  const statusStyle: Record<string, { badge: string; label: string }> = {
+    normal:  { badge: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300", label: "Normal" },
+    warning: { badge: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300", label: "Warning" },
+    danger:  { badge: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300", label: "Danger" },
+  };
+
+  const time = new Date(timestamp).toLocaleString("en-MY", {
+    timeZone: "Asia/Kuala_Lumpur",
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+
+  return (
+    <div className="space-y-6">
+      {/* ── Risk Banner ── */}
+      <div className={`rounded-2xl border-2 ${cfg.bg} ${cfg.border} p-6 flex flex-col sm:flex-row items-center gap-5`}>
+        <div className="shrink-0">{cfg.icon}</div>
+        <div className="text-center sm:text-left">
+          <p className={`text-2xl font-extrabold ${cfg.text}`}>{cfg.heading}</p>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{cfg.sub}</p>
+          <p className="mt-3 text-xs text-gray-400">Last updated: {time}</p>
+        </div>
+      </div>
+
+      {/* ── Sensor Status Cards ── */}
+      <div>
+        <h2 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-3">Sensor Conditions</h2>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+          {sensorConfig.map(({ key, label, icon, desc }) => {
+            const raw = thresholdStatus?.[key];
+            const statusKey: string = raw?.status?.toLowerCase() ?? "normal";
+            const style = statusStyle[statusKey] ?? statusStyle["normal"];
+            const levelLabel = raw?.level ?? "Normal";
+            return (
+              <Card key={key} className="rounded-2xl shadow-sm">
+                <CardContent className="pt-5 pb-4 px-5 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {icon}
+                      <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{label}</span>
+                    </div>
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${style.badge}`}>
+                      {levelLabel || style.label}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{desc}</p>
+                  {raw?.message && (
+                    <p className="text-xs italic text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-2">
+                      {raw.message}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Site Map ── */}
+      <div>
+        <h2 className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-green-600" />
+          Monitoring Sites
+        </h2>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          {/* site legend */}
+          <div className="flex flex-wrap items-center gap-4 px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+            {SENSOR_NODES.filter((n) => n.id !== "All").map((node) => {
+              const data = perDevice?.[node.id];
+              const risk: string = data?.riskState ?? "Unknown";
+              const color = risk === "High" ? "#ef4444" : risk === "Moderate" ? "#f59e0b" : risk === "Low" ? "#22c55e" : "#9ca3af";
+              return (
+                <div key={node.id} className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ backgroundColor: color }} />
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{node.label}</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">{node.location}</span>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: color + "22", color }}>
+                    {risk}
+                  </span>
+                </div>
+              );
+            })}
+            <div className="ml-auto text-xs text-gray-400 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-ping inline-block" />
+              Live
+            </div>
+          </div>
+          <div style={{ height: 360 }}>
+            <SensorMap
+              nodes={SENSOR_NODES.filter((n) => n.id !== "All").map((node) => {
+                const data = perDevice?.[node.id];
+                return {
+                  id: node.id,
+                  label: node.label,
+                  location: node.location,
+                  lat: node.id === "ESP32-001" ? 4.4715 : 4.4698,
+                  lng: node.id === "ESP32-001" ? 101.3762 : 101.3779,
+                  risk: data?.riskState ?? "Unknown",
+                  riskScore: data?.riskScore,
+                  tilt: data?.tiltValue,
+                  soil: data?.soilMoisture,
+                  rain: data?.rainValue,
+                  updatedAt: data
+                    ? new Date(data.timestamp).toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: true,
+                      })
+                    : undefined,
+                };
+              })}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+export function Dashboard({ showZScore = true, isAdmin = true }: DashboardProps) {
   const [selectedDevice, setSelectedDevice] = useState<string>("All");
   const [chartFilter, setChartFilter] = useState<'all' | 'rain' | 'soil' | 'tilt'>('all');
+
+  // Community users get the simplified resident-focused view
+  if (!isAdmin) {
+    return <CommunityDashboard />;
+  }
 
   const deviceFilter = selectedDevice !== "All" ? { deviceId: selectedDevice } : {};
   const latestResult = useQuery(api.sensorData.getLatestResult, deviceFilter);

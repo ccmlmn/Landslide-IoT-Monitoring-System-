@@ -156,6 +156,12 @@ export default function SensorMap({ nodes }: SensorMapProps) {
     import("leaflet").then((L) => {
       delete (L.Icon.Default.prototype as any)._getIconUrl;
 
+      // React Strict Mode runs effects twice in dev; clear any stale Leaflet
+      // state left on the container to prevent "Map container already initialized".
+      if ((mapRef.current as any)._leaflet_id) {
+        delete (mapRef.current as any)._leaflet_id;
+      }
+
       const avgLat = nodes.reduce((s, n) => s + n.lat, 0) / nodes.length;
       const avgLng = nodes.reduce((s, n) => s + n.lng, 0) / nodes.length;
 
