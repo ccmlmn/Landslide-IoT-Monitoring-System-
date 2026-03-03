@@ -4,23 +4,37 @@ import { AppLayout } from "@/components/AppLayout";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { RoleGuard } from "@/components/RoleGuard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Clock, CheckCircle, Eye, AlertTriangle } from "lucide-react";
+import { FileText, Clock, CheckCircle, Eye, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+
+const PAGE_SIZE = 10;
 
 export default function ReportsLogs() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("All");
   const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   
   const allReports = useQuery(api.reports.getAllReports);
   const stats = useQuery(api.reports.getReportStats);
   const updateStatus = useMutation(api.reports.updateReportStatus);
 
-  const filteredReports = allReports?.filter(report => 
-    filterStatus === "All" ? true : report.status === filterStatus
-  ) || [];
+  const filteredReports = (() => {
+    return allReports?.filter(report =>
+      filterStatus === "All" ? true : report.status === filterStatus
+    ) || [];
+  })();
+
+  const totalPages = Math.max(1, Math.ceil(filteredReports.length / PAGE_SIZE));
+  const pagedReports = filteredReports.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const handleFilterChange = (value: string) => {
+    setFilterStatus(value);
+    setCurrentPage(1);
+    setSelectedReport(null);
+  };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -108,18 +122,42 @@ export default function ReportsLogs() {
           {/* Reports List */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <span>Reports ({filteredReports.length})</span>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="px-4 py-2 border-2 border-gray-200 dark:border-gray-600 rounded-lg font-medium text-sm bg-white dark:bg-gray-700 dark:text-gray-200 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer"
-                >
-                  <option value="All">All</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Reviewed">Reviewed</option>
-                  <option value="Resolved">Resolved</option>
-                </select>
+                <div className="flex items-center gap-3">
+                  {/* Pagination controls */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      title="Previous page"
+                    >
+                      <ChevronLeft className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      title="Next page"
+                    >
+                      <ChevronRight className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                    </button>
+                  </div>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => handleFilterChange(e.target.value)}
+                    className="px-4 py-2 border-2 border-gray-200 dark:border-gray-600 rounded-lg font-medium text-sm bg-white dark:bg-gray-700 dark:text-gray-200 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all cursor-pointer"
+                  >
+                    <option value="All">All</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Reviewed">Reviewed</option>
+                    <option value="Resolved">Resolved</option>
+                  </select>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -130,7 +168,7 @@ export default function ReportsLogs() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {filteredReports.map((report) => (
+                  {pagedReports.map((report) => (
                     <div
                       key={report._id}
                       className="border-2 border-gray-200 dark:border-gray-600 rounded-lg p-4 hover:border-blue-300 dark:hover:border-blue-500 transition-all"
