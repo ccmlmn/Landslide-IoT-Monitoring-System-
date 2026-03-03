@@ -13,7 +13,7 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, sidebar, onMenuClick }: AppLayoutProps) {
-  const latestResult = useQuery(api.sensorData.getLatestResult);
+  const latestResult = useQuery(api.sensorData.getLatestResult, {});
   const [darkMode, setDarkMode] = useState(false);
 
   // Sync dark mode state from localStorage + listen for changes from other components
