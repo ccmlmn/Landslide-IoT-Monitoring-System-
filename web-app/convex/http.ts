@@ -55,11 +55,13 @@ http.route({
       let riskResult = null;
       
       try {
-        // Try Python serverless function first (for production)
-        const deploymentUrl = process.env.NEXT_PUBLIC_VERCEL_URL || process.env.VERCEL_URL;
-        const apiUrl = deploymentUrl 
-          ? `https://${deploymentUrl}/api/calculate-risk`
-          : 'http://localhost:3000/api/calculate-risk';
+        // Try Python serverless function first (only when deployed)
+        // SITE_URL must be set in the Convex dashboard environment variables
+        const siteUrl = process.env.SITE_URL;
+        if (!siteUrl) {
+          throw new Error("SITE_URL not configured — skipping Python API");
+        }
+        const apiUrl = `${siteUrl}/api/calculate-risk`;
         
         const riskResponse = await fetch(apiUrl, {
           method: 'POST',
