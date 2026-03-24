@@ -66,18 +66,10 @@ class AnomalyDetector:
         Returns:
             Tuple of (risk_percentage, risk_state, z_scores_dict)
         """
-        # Add new data
-        self.history['rain'].append(rain)
-        self.history['soil'].append(soil)
-        self.history['tilt'].append(tilt)
-
-        # Keep only last N records
-        for key in self.history:
-            if len(self.history[key]) > self.window_size:
-                self.history[key].pop(0)
-
-        # Need enough data to calculate std dev
-        if len(self.history['rain']) < 5:
+        # Score the current reading against prior history only.
+        # This avoids diluting anomalies by letting a sample normalize itself.
+        if len(self.history['rain']) < 4:
+            self._append_to_history(rain, soil, tilt)
             return 0.0, "Initializing", {"rain": 0.0, "soil": 0.0, "tilt": 0.0}
 
         # === METHOD 1: Statistical Z-Scores ===
@@ -146,7 +138,19 @@ class AnomalyDetector:
             "tilt": round(z_tilt, 4)
         }
 
+        self._append_to_history(rain, soil, tilt)
+
         return round(final_risk, 2), final_state, z_scores
+
+    def _append_to_history(self, rain: float, soil: float, tilt: float) -> None:
+        """Append a reading and keep the rolling window bounded."""
+        self.history['rain'].append(rain)
+        self.history['soil'].append(soil)
+        self.history['tilt'].append(tilt)
+
+        for key in self.history:
+            if len(self.history[key]) > self.window_size:
+                self.history[key].pop(0)
 
     def _calculate_z(self, current: float, history: List[float]) -> float:
         """Calculate Z-score for a single sensor"""
