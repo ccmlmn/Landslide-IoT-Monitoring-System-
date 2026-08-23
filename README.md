@@ -30,10 +30,10 @@ Results stream live to a role-aware Next.js dashboard, and any transition into *
 | -------------------------- | --------------------------------------------------------------------------------------------------- |
 | ⚡ **Sub-second pipeline** | Risk is computed _inline_ in the Convex HTTP action the moment a node posts data — no polling delay |
 | 🧠 **Hybrid detection**    | Z-score anomaly detection **+** engineering thresholds, combined conservatively (worst case wins)   |
-| 🛡️ **Automatic failover**  | Python serverless scorer with a TypeScript in-database fallback if it is unreachable                |
+| 🛡️ **Automatic failover**  | Python serverless scorer with a TypeScript in-database fallback, kept at behavioural parity         |
 | 📡 **Multi-node**          | Multiple ESP32 units (Site A / Site B) tracked independently with per-device history and filtering  |
 | 🗺️ **Live sensor map**     | Leaflet map with risk-coloured pulsing markers for every node                                       |
-| 🚨 **Telegram alerting**   | Edge-triggered (fires only on transition _into_ High), with cross-site evacuation instructions      |
+| 🚨 **Telegram alerting**   | Edge-triggered **per node** (fires only on that node's transition _into_ High), with evacuation guidance |
 | 👥 **Role-based access**   | Clerk-backed `admin` / `community` roles with separate navigation, pages, and data depth            |
 | 📝 **Community reporting** | Ground-truth observations from residents, triaged by admins through a status workflow               |
 
@@ -53,6 +53,7 @@ Results stream live to a role-aware Next.js dashboard, and any transition into *
 - [API Reference](#api-reference)
 - [Project Structure](#project-structure)
 - [Tech Stack](#tech-stack)
+- [Known Limitations](#known-limitations)
 - [License](#license)
 
 ---
@@ -87,7 +88,7 @@ The demo covers:
 │ rain · soil  │  rain/soil/tilt │  2. load last 20 readings (per device)    │
 │ tilt (MPU)   │                 │  3. score risk                            │
 └──────────────┘                 │  4. persist result → anomalyResults       │
-                                 │  5. alert on High transition              │
+                                 │  5. alert on per-node High transition     │
                                  └─────────────────┬─────────────────────────┘
                                                    │
                        ┌───────────────────────────┴───────────────────────┐
@@ -103,11 +104,15 @@ The demo covers:
        ┌────────────────────────────────┐              ┌────────────────────────────┐
        │  Next.js Dashboard             │              │  Telegram Bot API          │
        │  live WebSocket subscriptions  │              │  /api/send-telegram-alert  │
-       │  Admin view  │  Community view │              │  (only on Low/Mod → High)  │
+       │  Admin view  │  Community view │              │  (per node, on → High)     │
        └────────────────────────────────┘              └────────────────────────────┘
 ```
 
-**Why this shape?** Scoring happens inside the ingest path, so the dashboard and the alert channel react to a reading in the same request that stores it. The standalone Python poller in [backend/](backend/) remains available for **local and offline processing during development**, but it is no longer required by the deployed pipeline.
+**Why this shape?** Scoring happens inside the ingest path, so the dashboard and the alert channel react to a reading in the same request that stores it.
+
+**Per-node isolation.** Every lookup in the ingest path — rolling window, previous risk state, and the risk value echoed back to the device — is scoped by `device_id`. Each node therefore alerts on its own transition into High and drives its own buzzer, so one site being in danger neither suppresses nor triggers an alert for the other.
+
+The standalone Python poller in [backend/](backend/) remains available for **local and offline processing during development**, but it is no longer required by the deployed pipeline.
 
 ---
 
@@ -124,7 +129,7 @@ Z = (current − mean) / σ        over a rolling window of the last 20 readings
 - Risk % maps `Z = 0…3` onto `0…100%` (3σ = 100%).
 - The current sample is scored against **prior history only**, so an anomaly cannot dilute itself.
 - Tilt or soil beyond **3σ** immediately escalates statistical risk to 100%.
-- The first 4 readings from a node return state `Initializing` while the window fills.
+- A node needs **4 prior readings** before Z-scores are meaningful; until then the statistical method contributes nothing and reports `Initializing`. Method 2 still applies — see below.
 - **Catches:** sudden acceleration, early warnings, rate of change — _even while absolute values still look safe_.
 
 ### Method 2 — Fixed Thresholds
@@ -142,6 +147,7 @@ Z = (current − mean) / σ        over a rolling window of the last 20 readings
 | **1** sensor in warning   | 50 %           |
 | All normal                | 0 %            |
 
+- These limits need no history, so they are enforced **from the very first reading**. A node that boots up already past a danger limit reports `High` immediately rather than sitting at `Initializing` with 0% risk.
 - **Catches:** slow creep and absolute physical limits that statistics would eventually treat as the "new normal".
 
 ### Hybrid Combination
@@ -151,11 +157,17 @@ final_risk  = max(statistical_risk, threshold_risk)
 final_state = worse_of(statistical_state, threshold_state)
 ```
 
-| State           | Score    | Colour |
-| --------------- | -------- | ------ |
-| 🟢 **Low**      | 0–30 %   | Green  |
-| 🟡 **Moderate** | 30–60 %  | Amber  |
-| 🔴 **High**     | 60–100 % | Red    |
+| State               | Score    | Colour | When                                                          |
+| ------------------- | -------- | ------ | ------------------------------------------------------------- |
+| ⚪ **Initializing** | 0 %      | Grey   | Fewer than 4 prior readings **and** no threshold breached     |
+| 🟢 **Low**          | 0–30 %   | Green  |                                                               |
+| 🟡 **Moderate**     | 30–60 %  | Amber  |                                                               |
+| 🔴 **High**         | 60–100 % | Red    |                                                               |
+
+> `Initializing` means "not enough history to judge statistically" — it never
+> suppresses a threshold breach. Both the Python and TypeScript engines use the
+> same 4-reading warm-up so a node scores identically whichever one serves the
+> request.
 
 ### Worked scenarios
 
@@ -164,6 +176,8 @@ final_state = worse_of(statistical_state, threshold_state)
 | Rapid acceleration — tilt 2° → 8° (Z ≈ 4.5, still under 15°) | HIGH    | Normal    | **HIGH**  |
 | Slow creep — tilt drifts to 26° over days                    | Normal  | HIGH      | **HIGH**  |
 | Stable readings within limits                                | Normal  | Normal    | **LOW**   |
+| Node boots up already tilted 30° (no history yet)            | —       | HIGH      | **HIGH**  |
+| First few readings, everything within limits                 | —       | Normal    | **INIT**  |
 
 ---
 
@@ -177,10 +191,17 @@ Roles live in Clerk `publicMetadata.role`. Everyone defaults to `community`; acc
 | **Live Monitoring** |  ✅   |    ✅     | Per-sensor charts with warning/danger reference lines; admins can filter by node or compare Site A against Site B   |
 | **Alerts & Logs**   |  ✅   |     —     | Searchable, filterable, paginated alert history with detail modal and export                                        |
 | **Reports Logs**    |  ✅   |     —     | Triage community reports: filter by status, update status, attach admin notes, view statistics                      |
-| **Settings**        |  ✅   |     —     | Algorithm parameters, threshold values, device management, dark mode                                                |
+| **Settings**        |  ✅   |     —     | Dark mode (persisted). Algorithm and threshold sliders are a **preview only** — see the note below                   |
 | **Report Issue**    |   —   |    ✅     | Submit ground observations: crack, seepage, sound, movement, falling rocks, other — with severity and location      |
 
 **Community reporting workflow:** submission → `Pending` → admin review → `Reviewed` / `Resolved`, with optional admin notes at each step.
+
+> **Settings are not yet persisted.** Detection thresholds live in the analysis code
+> ([`web-app/api/anomaly_detector.py`](web-app/api/anomaly_detector.py) and
+> [`web-app/convex/anomalyDetection.ts`](web-app/convex/anomalyDetection.ts)), not in the
+> database. The sliders on the Settings page reflect those values but do not change
+> them, so the **Save Changes** button is disabled rather than silently doing nothing.
+> To retune the system, edit the thresholds in **both** engines so they stay in sync.
 
 ---
 
@@ -325,6 +346,17 @@ Upload with the Arduino IDE:
 
 The firmware also drives on-device LED and buzzer alerts, so a node keeps warning locally even if connectivity drops.
 
+**Failure behaviour**
+
+| Situation                | Node behaviour                                                                                                    |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| MPU6050 not detected     | Presence is latched from `mpu.begin()` at boot. Tilt is not read and `CRITICAL: MPU6050 not found!` is logged; the rain and soil sensors keep working. |
+| WiFi drops after boot    | `loop()` retries `WiFi.begin()` on each cycle, so the node rejoins on its own once the network returns.            |
+| Server unreachable / bad response | The buzzer is driven LOW (fail-safe) rather than left in its previous state.                             |
+
+> The tilt reading defaults to `0.0`, which looks identical to "perfectly stable ground".
+> Check the serial log at boot to confirm the MPU6050 was actually detected before trusting a flat tilt trace.
+
 ---
 
 ## Deployment
@@ -338,6 +370,12 @@ The web app deploys to **Vercel**, which serves both the Next.js dashboard and t
 5. Point each ESP32's `SERVER_URL` at the production `.convex.site` endpoint.
 
 Both `/api/calculate-risk` and `/api/send-telegram-alert` are declared **public routes** in [web-app/middleware.ts](web-app/middleware.ts) so Convex can call them without a Clerk session.
+
+> ⚠️ **Known limitation.** Those two routes, and the Convex `/sensor-data` endpoint, accept
+> unauthenticated requests. Anyone who learns the URLs can post fabricated sensor readings or
+> trigger a Telegram alert. This is acceptable for a coursework demo but **must be addressed
+> before any real deployment** — the usual fix is a shared secret header checked by the route
+> and set alongside `SITE_URL` in the Convex dashboard, plus a per-device key for the ESP32.
 
 ---
 
@@ -445,6 +483,23 @@ Landslide IoT System/
 **Hardware** — ESP32 on the Arduino framework · Adafruit MPU6050 · ArduinoJson · HTTPClient
 
 **Integrations** — Telegram Bot API · Vercel
+
+---
+
+## Known Limitations
+
+Honest notes on what this build does **not** do yet. None of these block the demo,
+but each matters before the system is trusted with real slopes.
+
+| Area                       | Limitation                                                                                                                                              |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Endpoint authentication** | `/sensor-data`, `/api/calculate-risk` and `/api/send-telegram-alert` accept unauthenticated requests. Fabricated readings and alerts are possible.        |
+| **Settings persistence**   | Threshold and algorithm sliders are a preview; the real values are constants in the two engines. Save is disabled.                                       |
+| **Duplicated risk engine** | `web-app/api/anomaly_detector.py` and `backend/anomaly_detector.py` are byte-identical copies, and `anomalyDetection.ts` re-implements the same logic. All three must be edited together. |
+| **Fixed node registry**    | Site names, map coordinates, and the `ESP32-001` / `ESP32-002` IDs are hard-coded in ~15 places in the dashboard **and** in `sensorData.getLatestResultPerDevice`. A third node would not appear without code changes. |
+| **Rain units**             | Rain is a unitless 0–100 sensor mapping, not a calibrated mm/hr rate; thresholds are relative rather than meteorological.                                  |
+| **No automated tests**     | Despite the `test_*.py` filenames, [`test_setup.py`](test_setup.py) is a dependency/connectivity check and [`backend/test_esp32.py`](backend/test_esp32.py) is the data simulator. There is no unit-test suite; correctness rests on `tsc`, ESLint, and manual runs. |
+| **Next.js 16 deprecation** | The `middleware.ts` convention is deprecated in favour of `proxy.ts`; it still works but emits a build warning.                                          |
 
 ---
 
