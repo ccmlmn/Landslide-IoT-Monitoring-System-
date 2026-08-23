@@ -62,7 +62,12 @@ export default function LiveMonitoring() {
   );
 
   // ── Community loading state ──────────────────────────────────────────────
-  if (!isAdmin && (!latestSiteA || !latestSiteB)) {
+  // useQuery returns `undefined` while loading and `null` when the query ran but
+  // found nothing. Only `undefined` means "still loading" — testing falsiness
+  // would leave residents staring at a skeleton forever whenever a site has not
+  // reported yet (a node not deployed, or wiped data).
+  const communityLoading = latestSiteA === undefined || latestSiteB === undefined;
+  if (!isAdmin && communityLoading) {
     return (
       <AppLayout sidebar={sidebar} onMenuClick={() => setSidebarOpen(true)}>
         <div className="space-y-6 animate-pulse">
@@ -125,30 +130,69 @@ export default function LiveMonitoring() {
   // COMMUNITY VIEW
   // ════════════════════════════════════════════════════════════════════════
   if (!isAdmin) {
+    // A site with no readings yet is skipped rather than rendered from a
+    // non-null assertion — otherwise reading .thresholds/.tiltValue off null
+    // throws and takes the whole page down for residents.
     const siteData = [
-      { site: latestSiteA!, recent: recentSiteA ?? [], siteLabel: "Site A", location: "Armani Cameron Residence", color: "#2563eb", altColor: "#7c3aed" },
-      { site: latestSiteB!, recent: recentSiteB ?? [], siteLabel: "Site B", location: "Armani Cameron Residence", color: "#059669", altColor: "#d97706" },
-    ];
+      { site: latestSiteA, recent: recentSiteA ?? [], siteLabel: "Site A", location: "Armani Cameron Residence", color: "#2563eb", altColor: "#7c3aed" },
+      { site: latestSiteB, recent: recentSiteB ?? [], siteLabel: "Site B", location: "Armani Cameron Residence", color: "#059669", altColor: "#d97706" },
+    ].filter((s): s is typeof s & { site: NonNullable<typeof s.site> } => s.site != null);
 
-    const thresholds = latestSiteA!.thresholds || {
+    const DEFAULT_THRESHOLDS = {
       tilt: { warning: 15, danger: 25, unit: '°' },
       soil: { warning: 70, danger: 85, unit: '%' },
       rain: { warning: 50, danger: 75, unit: '' },
     };
+    const thresholds =
+      latestSiteA?.thresholds ?? latestSiteB?.thresholds ?? DEFAULT_THRESHOLDS;
 
-    // Build combined chart data aligned by index
-    const maxLen = Math.max(recentSiteA?.length ?? 0, recentSiteB?.length ?? 0);
-    const reversedA = [...(recentSiteA ?? [])].reverse();
-    const reversedB = [...(recentSiteB ?? [])].reverse();
-    const combinedChart = Array.from({ length: maxLen }, (_, i) => ({
-      time: new Date((reversedA[i] ?? reversedB[i]).timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      siteA_tilt: reversedA[i]?.tiltValue ?? null,
-      siteB_tilt: reversedB[i]?.tiltValue ?? null,
-      siteA_soil: reversedA[i]?.soilMoisture ?? null,
-      siteB_soil: reversedB[i]?.soilMoisture ?? null,
-      siteA_rain: reversedA[i]?.rainValue ?? null,
-      siteB_rain: reversedB[i]?.rainValue ?? null,
-    }));
+    // Build combined chart data aligned by TIMESTAMP, not by array position.
+    // The two sites are independent devices posting on their own cycles, so
+    // index i of Site A and index i of Site B are different moments. Aligning by
+    // index plotted Site B's readings against Site A's clock — and if one site
+    // had fewer records (offline for a while, deployed later) the whole series
+    // was shifted, making the two lines look correlated when they are not.
+    const byTime = new Map<string, {
+      ts: string;
+      siteA_tilt: number | null; siteB_tilt: number | null;
+      siteA_soil: number | null; siteB_soil: number | null;
+      siteA_rain: number | null; siteB_rain: number | null;
+    }>();
+
+    const slot = (ts: string) => {
+      let row = byTime.get(ts);
+      if (!row) {
+        row = {
+          ts,
+          siteA_tilt: null, siteB_tilt: null,
+          siteA_soil: null, siteB_soil: null,
+          siteA_rain: null, siteB_rain: null,
+        };
+        byTime.set(ts, row);
+      }
+      return row;
+    };
+
+    (recentSiteA ?? []).forEach((r) => {
+      const row = slot(r.timestamp);
+      row.siteA_tilt = r.tiltValue;
+      row.siteA_soil = r.soilMoisture;
+      row.siteA_rain = r.rainValue;
+    });
+    (recentSiteB ?? []).forEach((r) => {
+      const row = slot(r.timestamp);
+      row.siteB_tilt = r.tiltValue;
+      row.siteB_soil = r.soilMoisture;
+      row.siteB_rain = r.rainValue;
+    });
+
+    // ISO timestamps sort chronologically as plain strings
+    const combinedChart = Array.from(byTime.values())
+      .sort((a, b) => a.ts.localeCompare(b.ts))
+      .map(({ ts, ...values }) => ({
+        time: new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        ...values,
+      }));
 
     return (
       <AppLayout sidebar={sidebar} onMenuClick={() => setSidebarOpen(true)}>
@@ -471,7 +515,7 @@ export default function LiveMonitoring() {
               <ComposedChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" className="[&>line]:stroke-gray-200 dark:[&>line]:stroke-gray-600" />
                 <XAxis dataKey="time" tick={{ fontSize: 12 }} stroke="#9ca3af" />
-                <YAxis tick={{ fontSize: 12 }} domain={[0, thresholds.tilt.danger * 1.2]} stroke="#9ca3af" />
+                <YAxis tick={{ fontSize: 12 }} domain={[0, (dataMax: number) => Math.max(dataMax, thresholds.tilt.danger * 1.2)]} stroke="#9ca3af" />
                 <Tooltip />
                 <Legend />
                 
@@ -558,7 +602,7 @@ export default function LiveMonitoring() {
               <ComposedChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" className="[&>line]:stroke-gray-200 dark:[&>line]:stroke-gray-600" />
                 <XAxis dataKey="time" tick={{ fontSize: 12 }} stroke="#9ca3af" />
-                <YAxis tick={{ fontSize: 12 }} domain={[0, thresholds.soil.danger * 1.2]} stroke="#9ca3af" />
+                <YAxis tick={{ fontSize: 12 }} domain={[0, (dataMax: number) => Math.max(dataMax, thresholds.soil.danger * 1.2)]} stroke="#9ca3af" />
                 <Tooltip />
                 <Legend />
                 
@@ -642,7 +686,7 @@ export default function LiveMonitoring() {
               <ComposedChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" className="[&>line]:stroke-gray-200 dark:[&>line]:stroke-gray-600" />
                 <XAxis dataKey="time" tick={{ fontSize: 12 }} stroke="#9ca3af" />
-                <YAxis tick={{ fontSize: 12 }} domain={[0, thresholds.rain.danger * 1.2]} stroke="#9ca3af" />
+                <YAxis tick={{ fontSize: 12 }} domain={[0, (dataMax: number) => Math.max(dataMax, thresholds.rain.danger * 1.2)]} stroke="#9ca3af" />
                 <Tooltip />
                 <Legend />
                 

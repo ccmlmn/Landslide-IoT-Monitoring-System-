@@ -25,7 +25,7 @@ export default function Settings() {
   const [chartRefreshRate, setChartRefreshRate] = useState(3);
 
   // Threshold Value Settings (demo - values don't persist)
-  const [soilMoistureThreshold, setSoilMoistureThreshold] = useState(75);
+  const [soilMoistureThreshold, setSoilMoistureThreshold] = useState(70);
   const [rainfallThreshold, setRainfallThreshold] = useState(50);
   const [inclinationThreshold, setInclinationThreshold] = useState(15);
 
@@ -67,7 +67,7 @@ export default function Settings() {
     setZScoreThreshold(3.0);
     setSlidingWindowSize(10);
     setChartRefreshRate(3);
-    setSoilMoistureThreshold(75);
+    setSoilMoistureThreshold(70);
     setRainfallThreshold(50);
     setInclinationThreshold(15);
   };
@@ -102,11 +102,33 @@ export default function Settings() {
                 <RotateCcw className="h-4 w-4" />
                 Reset
               </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium">
+              {/* Persisting these values is not implemented: the detection
+                  thresholds live in the analysis code, not in the database.
+                  The button is disabled rather than silently inert so an admin
+                  cannot believe they have tightened a safety threshold when
+                  nothing was applied. */}
+              <button
+                disabled
+                title="Saving is not implemented yet — these controls are a preview and do not change detection thresholds."
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+              >
                 <Save className="h-4 w-4" />
                 Save Changes
               </button>
             </div>
+          </div>
+
+          {/* These sliders are a UI preview only. Detection thresholds are
+              defined in the analysis code and are not read from here. */}
+          <div className="flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
+            <SlidersHorizontal className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-amber-800 dark:text-amber-300">
+              <span className="font-semibold">Preview only — changes are not saved.</span>{" "}
+              The live detection thresholds are configured in the analysis code and
+              are not controlled from this page. Adjusting these sliders does not
+              change when alerts are raised. Dark mode is the one setting here that
+              does take effect.
+            </p>
           </div>
 
           {/* Main Grid */}

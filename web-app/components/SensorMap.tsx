@@ -155,6 +155,11 @@ export default function SensorMap({ nodes }: SensorMapProps) {
   const mapInstanceRef = useRef<any>(null);
   const layerGroupRef = useRef<any>(null);
 
+  // Always holds the freshest nodes, so the redraw effect can read current data
+  // without taking a dependency on the array's identity.
+  const nodesRef = useRef(nodes);
+  nodesRef.current = nodes;
+
   // ── Initialize map once on mount ──────────────────────────────────────────
   useEffect(() => {
     if (typeof window === "undefined" || !mapRef.current) return;
@@ -203,14 +208,21 @@ export default function SensorMap({ nodes }: SensorMapProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Re-draw markers whenever risk data changes ────────────────────────────
+  // ── Re-draw markers whenever risk data actually changes ───────────────────
+  // Callers build the `nodes` array inline, so it is a new object on every
+  // parent render — including renders triggered by unrelated state (a dropdown,
+  // a chart filter). Depending on array identity tore down and rebuilt every
+  // marker each time, which closed any popup the user had open and restarted
+  // the pulse animation. Depend on the *content* instead.
+  const nodesKey = JSON.stringify(nodes);
   useEffect(() => {
     if (!mapInstanceRef.current || !layerGroupRef.current) return;
     import("leaflet").then((L) => {
       if (!layerGroupRef.current) return;
-      renderMarkers(L, layerGroupRef.current, nodes);
+      renderMarkers(L, layerGroupRef.current, nodesRef.current);
     });
-  }, [nodes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodesKey]);
 
   return <div ref={mapRef} className="w-full h-full rounded-b-2xl z-0" />;
 }
