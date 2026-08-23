@@ -68,9 +68,24 @@ class AnomalyDetector:
         """
         # Score the current reading against prior history only.
         # This avoids diluting anomalies by letting a sample normalize itself.
-        if len(self.history['rain']) < 4:
+        if min(len(self.history[k]) for k in ('rain', 'soil', 'tilt')) < 4:
             self._append_to_history(rain, soil, tilt)
-            return 0.0, "Initializing", {"rain": 0.0, "soil": 0.0, "tilt": 0.0}
+            # Z-scores need history, but the fixed thresholds do not: they are
+            # absolute engineering limits. Applying them during warm-up keeps a
+            # reading that is already past the danger line from being reported as
+            # zero risk just because the system has only just started.
+            threshold_status = self.get_threshold_data(rain, soil, tilt)
+            danger_count = sum(1 for s in threshold_status.values() if s['status'] == 'danger')
+            warning_count = sum(1 for s in threshold_status.values() if s['status'] == 'warning')
+
+            zeros = {"rain": 0.0, "soil": 0.0, "tilt": 0.0}
+            if danger_count >= 1:
+                return 100.0, "High", zeros
+            if warning_count >= 2:
+                return 80.0, "High", zeros
+            if warning_count >= 1:
+                return 50.0, "Moderate", zeros
+            return 0.0, "Initializing", zeros
 
         # === METHOD 1: Statistical Z-Scores ===
         z_rain = self._calculate_z(rain, self.history['rain'])

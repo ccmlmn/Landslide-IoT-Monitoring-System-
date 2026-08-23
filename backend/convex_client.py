@@ -38,7 +38,7 @@ class ConvexClient:
                 headers={"Content-Type": "application/json"}
             )
             response.raise_for_status()
-            return True
+            return self._succeeded(response)
         except Exception as e:
             print(f"Error marking as processed: {e}")
             return False
@@ -55,10 +55,25 @@ class ConvexClient:
                 headers={"Content-Type": "application/json"}
             )
             response.raise_for_status()
-            return True
+            return self._succeeded(response)
         except Exception as e:
             print(f"Error adding anomaly result: {e}")
             return False
+
+    @staticmethod
+    def _succeeded(response) -> bool:
+        """Convex reports function errors in a 200 response body, not the status
+        code, so raise_for_status() alone would report a failed write as success —
+        and app.py would then mark the record processed and lose the result."""
+        try:
+            body = response.json()
+        except ValueError:
+            print("Error: Convex returned a non-JSON response")
+            return False
+        if body.get("status") == "error":
+            print(f"Convex error: {body.get('errorMessage', body)}")
+            return False
+        return True
     
     def get_all_sensor_data(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Get all sensor data for debugging"""

@@ -22,10 +22,19 @@ class handler(BaseHTTPRequestHandler):
             tilt = float(data.get('tiltValue', 0.0))
             history = data.get('history', {})
             
-            # Initialize detector with history if provided
+            # Initialize detector with history if provided.
+            # Normalise it rather than assigning the raw payload: the detector
+            # indexes all three keys, so a caller that omits one (or sends a
+            # non-list) would otherwise blow up mid-calculation.
             detector = AnomalyDetector(window_size=20)
-            if history:
-                detector.history = history
+            if isinstance(history, dict):
+                for key in ('rain', 'soil', 'tilt'):
+                    values = history.get(key)
+                    if isinstance(values, list):
+                        detector.history[key] = [
+                            float(v) for v in values
+                            if isinstance(v, (int, float)) and not isinstance(v, bool)
+                        ]
             
             # Calculate risk
             risk_score, risk_state, z_scores = detector.update_and_score(rain, soil, tilt)

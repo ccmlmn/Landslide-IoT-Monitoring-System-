@@ -112,8 +112,17 @@ http.route({
         const timestamp = new Date().toISOString();
 
         // Check previous risk state BEFORE saving new result
-        // Used to detect High risk transition (only alert when transitioning to High)
-        const previousResult = await ctx.runQuery(api.anomalyResults.getLatest);
+        // Used to detect High risk transition (only alert when transitioning to High).
+        // This must be scoped to the reporting device: with several nodes posting,
+        // the globally-latest result usually belongs to a *different* node, which
+        // both suppresses a node's first High alert (if another node is already
+        // High) and re-fires alerts for a node that is simply staying High.
+        const previousResult =
+          typeof device_id === "string"
+            ? await ctx.runQuery(api.anomalyResults.getLatestByDevice, {
+                deviceId: device_id,
+              })
+            : await ctx.runQuery(api.anomalyResults.getLatest);
         const previousRiskState = previousResult?.riskState ?? "Low";
         
         await ctx.runMutation(api.sensorData.addAnomalyResult, {
@@ -182,8 +191,15 @@ http.route({
         );
       }
 
-      // Final fallback: Return last known risk state
-      const latestAnomaly = await ctx.runQuery(api.anomalyResults.getLatest);
+      // Final fallback: Return this device's last known risk state.
+      // Scoped per-device because the ESP32 drives its local buzzer off this value —
+      // a global lookup would sound one node's buzzer for another node's risk.
+      const latestAnomaly =
+        typeof device_id === "string"
+          ? await ctx.runQuery(api.anomalyResults.getLatestByDevice, {
+              deviceId: device_id,
+            })
+          : await ctx.runQuery(api.anomalyResults.getLatest);
 
       return new Response(
         JSON.stringify({ 

@@ -3,6 +3,17 @@ import { NextRequest, NextResponse } from "next/server";
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN?.trim();
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID?.trim();
 
+// The message is sent with parse_mode: "HTML", so any value interpolated into it
+// must be escaped. `location` is free-text configured on the device, and a stray
+// "&" or "<" makes Telegram reject the whole message ("can't parse entities") —
+// which would silently drop a high-risk alert.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 export async function POST(req: NextRequest) {
   try {
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
@@ -29,7 +40,10 @@ export async function POST(req: NextRequest) {
         });
 
     // Determine affected site and evacuation site dynamically
-    const locationStr: string = location ?? "Unknown Location";
+    const locationStr: string =
+      typeof location === "string" && location.trim() !== ""
+        ? location
+        : "Unknown Location";
     let affectedSite = locationStr;
     let evacuateTo = "a safe location";
 
@@ -44,13 +58,20 @@ export async function POST(req: NextRequest) {
       evacuateTo = "Site A";
     }
 
+    // Guard against a missing/non-numeric score: calling .toFixed() on it would
+    // throw and lose the alert entirely, which matters more than a precise number.
+    const scoreText =
+      typeof riskScore === "number" && Number.isFinite(riskScore)
+        ? `${riskScore.toFixed(1)}%`
+        : "unavailable";
+
     const message = [
       `🚨 <b>LANDSLIDE HIGH RISK ALERT</b> 🚨`,
       ``,
       `⚠️ <b>Risk Level:</b> HIGH`,
-      `📊 <b>Risk Score:</b> ${(riskScore).toFixed(1)}%`,
+      `📊 <b>Risk Score:</b> ${scoreText}`,
       ``,
-      `📍 <b>Location:</b> ${affectedSite}`,
+      `📍 <b>Location:</b> ${escapeHtml(affectedSite)}`,
       ``,
       `🕒 <b>Time (MYT):</b> ${time}`,
       ``,

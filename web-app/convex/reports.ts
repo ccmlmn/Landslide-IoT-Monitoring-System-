@@ -78,9 +78,13 @@ export const updateReportStatus = mutation({
     adminNotes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Patching a field with `undefined` deletes it in Convex, so passing
+    // adminNotes through unconditionally would erase existing notes on every
+    // status change made without them (which is how the admin UI calls this).
+    // Only include the field when the caller actually supplied it.
     await ctx.db.patch(args.reportId, {
       status: args.status,
-      adminNotes: args.adminNotes,
+      ...(args.adminNotes !== undefined ? { adminNotes: args.adminNotes } : {}),
     });
   },
 });

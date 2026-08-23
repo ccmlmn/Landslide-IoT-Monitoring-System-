@@ -38,6 +38,7 @@ const float THRESHOLD_TILT = 20.0; // Trigger LED if angle > 20 degrees
 
 // MPU6050 Object
 Adafruit_MPU6050 mpu;
+bool mpuReady = false; // Set once at boot; the only reliable "is the MPU there?" flag
 
 void setup()
 {
@@ -59,17 +60,19 @@ void setup()
   Serial.println("Initializing MPU6050...");
   Wire.begin(21, 22); // Force SDA, SCL
 
-  if (!mpu.begin(0x68))
+  mpuReady = mpu.begin(0x68);
+  if (!mpuReady)
   {
     Serial.println("Address 0x68 failed. Trying 0x69...");
-    if (!mpu.begin(0x69))
+    mpuReady = mpu.begin(0x69);
+    if (!mpuReady)
     {
       Serial.println("CRITICAL: MPU6050 not found!");
       // We continue so the other sensors still work
     }
   }
 
-  if (mpu.getAccelerometerRange() != MPU6050_RANGE_8_G)
+  if (mpuReady)
   {
     mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
     mpu.setGyroRange(MPU6050_RANGE_500_DEG);
@@ -112,8 +115,11 @@ void loop()
   sensors_event_t a, g, temp;
   float tiltValue = 0.0;
 
-  // Only try to read if MPU is connected
-  if (mpu.getAccelerometerRange() != 0)
+  // Only try to read if MPU is connected.
+  // NOTE: do not test getAccelerometerRange() here — MPU6050_RANGE_2_G is 0, so
+  // that comparison is a range check, not a presence check, and it reads over I2C
+  // from a chip that may not be there.
+  if (mpuReady)
   {
     mpu.getEvent(&a, &g, &temp);
     // Calculate Tilt Angle (Y/Z axis method)
@@ -217,7 +223,12 @@ void loop()
   }
   else
   {
-    Serial.println("WiFi Disconnected");
+    // Without this the node stays dark forever after a single dropout: loop()
+    // never calls WiFi.begin() again, so the dashboard silently loses the site.
+    Serial.println("WiFi Disconnected - reconnecting...");
+    digitalWrite(PIN_BUZZER, LOW); // fail-safe: no fresh risk state to act on
+    WiFi.disconnect();
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   }
 
   // Send every 10 seconds

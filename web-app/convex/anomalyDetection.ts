@@ -103,17 +103,45 @@ export const calculateRisk = action({
     const soilHistory: number[] = args.history?.soil ?? [];
     const tiltHistory: number[] = args.history?.tilt ?? [];
     
-    // Need at least 5 data points to calculate meaningful statistics
-    if (rainHistory.length < 5) {
+    // Need at least 4 prior readings to calculate meaningful statistics.
+    // Must match the Python implementation's warm-up length (api/anomaly_detector.py):
+    // the two paths are interchangeable at runtime, so a mismatch would make the
+    // same reading score differently depending on which one served the request.
+    const historyLength = Math.min(
+      rainHistory.length,
+      soilHistory.length,
+      tiltHistory.length
+    );
+    if (historyLength < 4) {
+      // Still apply the fixed thresholds. They are absolute engineering limits and
+      // need no history, so a reading already past the danger line must raise the
+      // alarm during warm-up rather than being reported as zero risk.
+      const thresholdStatus = {
+        rain: checkThresholdStatus('rain', args.rainValue),
+        soil: checkThresholdStatus('soil', args.soilMoisture),
+        tilt: checkThresholdStatus('tilt', args.tiltValue)
+      };
+      const dangerCount = Object.values(thresholdStatus).filter(s => s.status === 'danger').length;
+      const warningCount = Object.values(thresholdStatus).filter(s => s.status === 'warning').length;
+
+      let riskScore = 0;
+      let riskState = "Initializing";
+      if (dangerCount >= 1) {
+        riskScore = 100;
+        riskState = "High";
+      } else if (warningCount >= 2) {
+        riskScore = 80;
+        riskState = "High";
+      } else if (warningCount >= 1) {
+        riskScore = 50;
+        riskState = "Moderate";
+      }
+
       return {
-        riskScore: 0,
-        riskState: "Initializing",
+        riskScore,
+        riskState,
         zScores: { rain: 0, soil: 0, tilt: 0 },
-        thresholdStatus: {
-          rain: checkThresholdStatus('rain', args.rainValue),
-          soil: checkThresholdStatus('soil', args.soilMoisture),
-          tilt: checkThresholdStatus('tilt', args.tiltValue)
-        },
+        thresholdStatus,
         thresholds: THRESHOLDS,
         rollingMean: { rain: 0, soil: 0, tilt: 0 }
       };

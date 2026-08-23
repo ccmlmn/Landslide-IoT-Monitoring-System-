@@ -329,14 +329,10 @@ function CommunityDashboard() {
 }
 
 
-export function Dashboard({ showZScore = true, isAdmin = true }: DashboardProps) {
+// ─── Admin dashboard (full telemetry view) ────────────────────────────────────
+function AdminDashboard({ showZScore = true }: { showZScore?: boolean }) {
   const [selectedDevice, setSelectedDevice] = useState<string>("All");
   const [chartFilter, setChartFilter] = useState<'all' | 'rain' | 'soil' | 'tilt'>('all');
-
-  // Community users get the simplified resident-focused view
-  if (!isAdmin) {
-    return <CommunityDashboard />;
-  }
 
   const deviceFilter = selectedDevice !== "All" ? { deviceId: selectedDevice } : {};
   const latestResult = useQuery(api.sensorData.getLatestResult, deviceFilter);
@@ -680,5 +676,13 @@ export function Dashboard({ showZScore = true, isAdmin = true }: DashboardProps)
       </div>
     </div>
   );
+}
+
+export function Dashboard({ showZScore = true, isAdmin = true }: DashboardProps) {
+  // Each role renders its own component. Keeping the branch here — rather than an
+  // early return inside one component — means neither view's hooks are called
+  // conditionally, so React's hook order stays stable when `isAdmin` flips as
+  // Clerk resolves the user's role.
+  return isAdmin ? <AdminDashboard showZScore={showZScore} /> : <CommunityDashboard />;
 }
 
