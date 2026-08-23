@@ -1,472 +1,459 @@
-# Landslide IoT Monitoring System (Slope Sentry)
+<div align="center">
 
-A comprehensive real-time IoT landslide monitoring system using ESP32 sensors, Python backend with Z-score based anomaly detection, Convex real-time database, and Next.js dashboard with Clerk authentication and role-based access control.
+# 🏔️ Slope Sentry
+
+**Real-time IoT landslide monitoring and early-warning system**
+
+ESP32 sensor nodes → Convex real-time backend → hybrid risk engine → Next.js dashboard → Telegram alerts
+
+[![Next.js](https://img.shields.io/badge/Next.js-16.1-black?logo=next.js)](https://nextjs.org)
+[![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![Convex](https://img.shields.io/badge/Convex-1.31-EE342F)](https://convex.dev)
+[![Clerk](https://img.shields.io/badge/Clerk-6.36-6C47FF)](https://clerk.com)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
+[![ESP32](https://img.shields.io/badge/ESP32-Arduino-00979D?logo=arduino&logoColor=white)](https://www.espressif.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+</div>
+
+---
+
+## Overview
+
+Slope Sentry monitors slope stability in real time using distributed ESP32 sensor nodes measuring **rainfall**, **soil moisture**, and **ground tilt**. Every reading is scored by a **hybrid risk engine** that combines statistical anomaly detection (Z-score over a rolling window) with **fixed geological thresholds**, and always takes the _worse_ of the two — a deliberate fail-safe for a life-safety system.
+
+Results stream live to a role-aware Next.js dashboard, and any transition into **High** risk fires an instant Telegram alert with evacuation guidance.
+
+### Highlights
+
+|                            |                                                                                                     |
+| -------------------------- | --------------------------------------------------------------------------------------------------- |
+| ⚡ **Sub-second pipeline** | Risk is computed _inline_ in the Convex HTTP action the moment a node posts data — no polling delay |
+| 🧠 **Hybrid detection**    | Z-score anomaly detection **+** engineering thresholds, combined conservatively (worst case wins)   |
+| 🛡️ **Automatic failover**  | Python serverless scorer with a TypeScript in-database fallback if it is unreachable                |
+| 📡 **Multi-node**          | Multiple ESP32 units (Site A / Site B) tracked independently with per-device history and filtering  |
+| 🗺️ **Live sensor map**     | Leaflet map with risk-coloured pulsing markers for every node                                       |
+| 🚨 **Telegram alerting**   | Edge-triggered (fires only on transition _into_ High), with cross-site evacuation instructions      |
+| 👥 **Role-based access**   | Clerk-backed `admin` / `community` roles with separate navigation, pages, and data depth            |
+| 📝 **Community reporting** | Ground-truth observations from residents, triaged by admins through a status workflow               |
+
+---
+
+## Table of Contents
+
+- [Demo](#demo)
+- [Architecture](#architecture)
+- [Risk Engine](#risk-engine)
+- [Features by Role](#features-by-role)
+- [Hardware](#hardware)
+- [Quick Start](#quick-start)
+- [Environment Variables](#environment-variables)
+- [Firmware Setup](#firmware-setup)
+- [Deployment](#deployment)
+- [API Reference](#api-reference)
+- [Project Structure](#project-structure)
+- [Tech Stack](#tech-stack)
+- [License](#license)
+
+---
+
+## Demo
+
+<div align="center">
+  <a href="https://youtu.be/Zo7_nkXqK9g">
+    <img src="https://img.youtube.com/vi/Zo7_nkXqK9g/maxresdefault.jpg" alt="Slope Sentry — full system demo" width="700">
+  </a>
+  <p><em>▶️ Click to watch the full walkthrough</em></p>
+</div>
+
+The demo covers:
+
+- Sign-in and role-based routing — Admin and Community dashboards side by side
+- Live sensor readings streaming in from both nodes, with the risk level updating in real time
+- The sensor map showing per-node risk state
+- Threshold charts on Live Monitoring, with warning and danger reference lines
+- A High-risk event triggering an instant Telegram alert
+- Community report submission and admin triage in Reports Logs
+
+---
 
 ## Architecture
 
 ```
-ESP32 (Sensors) → Convex (HTTP Endpoint) → Database
-                                              ↓
-                                    Python Backend (Polls)
-                                              ↓
-                            Hybrid Risk Assessment Engine
-                        (Z-Score Statistics + Fixed Thresholds)
-                                              ↓
-                                    Convex (Anomaly Results + Reports)
-                                              ↓
-                                    Next.js Dashboard (Multi-page App)
-                                              ↓
-                          Role-Based Views (Admin / Community)
-                                              ↓
-                                    Real-time Charts & Navigation
+┌──────────────┐   HTTPS POST    ┌───────────────────────────────────────────┐
+│  ESP32 Node  │ ──────────────► │  Convex HTTP Action  /sensor-data         │
+│  (Site A/B)  │  device_id      │                                           │
+│              │  location       │  1. store raw reading  → sensorData       │
+│ rain · soil  │  rain/soil/tilt │  2. load last 20 readings (per device)    │
+│ tilt (MPU)   │                 │  3. score risk                            │
+└──────────────┘                 │  4. persist result → anomalyResults       │
+                                 │  5. alert on High transition              │
+                                 └─────────────────┬─────────────────────────┘
+                                                   │
+                       ┌───────────────────────────┴───────────────────────┐
+                       ▼                                                   ▼
+       ┌────────────────────────────────┐   fallback   ┌────────────────────────────┐
+       │  PRIMARY                       │ ───────────► │  FALLBACK                  │
+       │  Vercel Python function        │  on failure  │  Convex TS action          │
+       │  /api/calculate-risk  (NumPy)  │              │  anomalyDetection.ts       │
+       └────────────────────────────────┘              └────────────────────────────┘
+                                                   │
+                       ┌───────────────────────────┴───────────────────────┐
+                       ▼                                                   ▼
+       ┌────────────────────────────────┐              ┌────────────────────────────┐
+       │  Next.js Dashboard             │              │  Telegram Bot API          │
+       │  live WebSocket subscriptions  │              │  /api/send-telegram-alert  │
+       │  Admin view  │  Community view │              │  (only on Low/Mod → High)  │
+       └────────────────────────────────┘              └────────────────────────────┘
 ```
 
-## Hardware Components
+**Why this shape?** Scoring happens inside the ingest path, so the dashboard and the alert channel react to a reading in the same request that stores it. The standalone Python poller in [backend/](backend/) remains available for **local and offline processing during development**, but it is no longer required by the deployed pipeline.
 
-- **ESP32 Development Board** (DOIT DevKit V1)
-- **Rain Sensor** (Analog Pin 34 + Digital Pin 14)
-- **Capacitive Soil Moisture Sensor** (Analog Pin 32)
-- **MPU6050 Accelerometer/Gyroscope** (I2C Pins 21, 22)
-- **3x Alert LEDs** (Pins 17, 5, 18)
-- **Buzzer** (Pin 19) for audible alerts
+---
 
-## Prerequisites
+## Risk Engine
 
-- Node.js 18+ and npm
-- Python 3.11+
-- Convex account (https://convex.dev)
-- Clerk account (https://clerk.com)
-- (Optional) ESP32 with sensors for hardware deployment
+Every reading is scored by two independent methods; the **worse** result wins.
 
-## Setup Instructions
+### Method 1 — Statistical Z-Score
 
-### 1. Clone and Navigate
-
-```bash
-cd Landslide IoT System
+```
+Z = (current − mean) / σ        over a rolling window of the last 20 readings
 ```
 
-### 2. Set Up Convex
+- Risk % maps `Z = 0…3` onto `0…100%` (3σ = 100%).
+- The current sample is scored against **prior history only**, so an anomaly cannot dilute itself.
+- Tilt or soil beyond **3σ** immediately escalates statistical risk to 100%.
+- The first 4 readings from a node return state `Initializing` while the window fills.
+- **Catches:** sudden acceleration, early warnings, rate of change — _even while absolute values still look safe_.
+
+### Method 2 — Fixed Thresholds
+
+| Sensor            | Warning | Danger | Rationale                                          |
+| ----------------- | ------- | ------ | -------------------------------------------------- |
+| **Tilt**          | 15°     | 25°    | Noticeable ground movement → imminent failure risk |
+| **Soil Moisture** | 70 %    | 85 %   | Saturation onset → critical pore pressure          |
+| **Rainfall**      | 50      | 75     | Moderate → heavy rainfall intensity                |
+
+| Condition                 | Threshold risk |
+| ------------------------- | -------------- |
+| Any sensor in **danger**  | 100 %          |
+| **2+** sensors in warning | 80 %           |
+| **1** sensor in warning   | 50 %           |
+| All normal                | 0 %            |
+
+- **Catches:** slow creep and absolute physical limits that statistics would eventually treat as the "new normal".
+
+### Hybrid Combination
+
+```
+final_risk  = max(statistical_risk, threshold_risk)
+final_state = worse_of(statistical_state, threshold_state)
+```
+
+| State           | Score    | Colour |
+| --------------- | -------- | ------ |
+| 🟢 **Low**      | 0–30 %   | Green  |
+| 🟡 **Moderate** | 30–60 %  | Amber  |
+| 🔴 **High**     | 60–100 % | Red    |
+
+### Worked scenarios
+
+| Scenario                                                     | Z-Score | Threshold | **Final** |
+| ------------------------------------------------------------ | ------- | --------- | --------- |
+| Rapid acceleration — tilt 2° → 8° (Z ≈ 4.5, still under 15°) | HIGH    | Normal    | **HIGH**  |
+| Slow creep — tilt drifts to 26° over days                    | Normal  | HIGH      | **HIGH**  |
+| Stable readings within limits                                | Normal  | Normal    | **LOW**   |
+
+---
+
+## Features by Role
+
+Roles live in Clerk `publicMetadata.role`. Everyone defaults to `community`; access is enforced by Next.js middleware plus the `RoleGuard` component.
+
+| Page                | Admin | Community | Description                                                                                                         |
+| ------------------- | :---: | :-------: | ------------------------------------------------------------------------------------------------------------------- |
+| **Overview**        |  ✅   |    ✅     | Live risk level, sensor cards, trend charts, sensor map. Admins additionally see Z-scores and multi-node comparison |
+| **Live Monitoring** |  ✅   |    ✅     | Per-sensor charts with warning/danger reference lines; admins can filter by node or compare Site A against Site B   |
+| **Alerts & Logs**   |  ✅   |     —     | Searchable, filterable, paginated alert history with detail modal and export                                        |
+| **Reports Logs**    |  ✅   |     —     | Triage community reports: filter by status, update status, attach admin notes, view statistics                      |
+| **Settings**        |  ✅   |     —     | Algorithm parameters, threshold values, device management, dark mode                                                |
+| **Report Issue**    |   —   |    ✅     | Submit ground observations: crack, seepage, sound, movement, falling rocks, other — with severity and location      |
+
+**Community reporting workflow:** submission → `Pending` → admin review → `Reviewed` / `Resolved`, with optional admin notes at each step.
+
+---
+
+## Hardware
+
+| Component                                | Connection                                       |
+| ---------------------------------------- | ------------------------------------------------ |
+| ESP32 Development Board (DOIT DevKit V1) | —                                                |
+| Rain Sensor                              | Analog `GPIO 34` + Digital `GPIO 14`             |
+| Capacitive Soil Moisture Sensor          | Analog `GPIO 32`                                 |
+| MPU6050 Accelerometer / Gyroscope        | I²C `SDA 21`, `SCL 22` (address `0x68` / `0x69`) |
+| Alert LEDs (rain / soil / tilt)          | `GPIO 17`, `GPIO 5`, `GPIO 18`                   |
+| Buzzer                                   | `GPIO 19`                                        |
+
+Nodes are identified by `DEVICE_ID` (`ESP32-001` = Site A, `ESP32-002` = Site B) so the backend maintains a **separate rolling window per node**.
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- **Node.js 18+** and npm
+- **Python 3.11+** (only for the optional local backend and the data simulator)
+- A free [Convex](https://convex.dev) account
+- A free [Clerk](https://clerk.com) account
+- _(Optional)_ Telegram bot token and chat ID for alerts
+- _(Optional)_ ESP32 hardware — the system runs fully on simulated data without it
+
+### 1. Clone and install
 
 ```bash
-cd web-app
+git clone https://github.com/ccmlmn/Landslide-IoT-Monitoring-System-.git
+cd "Landslide IoT System/web-app"
 npm install
+```
+
+### 2. Provision Convex
+
+```bash
 npx convex dev
 ```
 
-This will:
+This creates (or links) a Convex project, deploys the schema and functions, and writes your deployment URL into `.env.local`.
 
-- Create a new Convex project (or link existing)
-- Generate your `CONVEX_URL`
-- Deploy your schema and functions
+### 3. Configure Clerk
 
-### 3. Set Up Clerk
+1. Create an application at [dashboard.clerk.com](https://dashboard.clerk.com).
+2. Copy the **Publishable key** and **Secret key** into `web-app/.env.local` (see below).
 
-1. Go to https://dashboard.clerk.com
-2. Create a new application
-3. Get your API keys from the dashboard
-4. Copy them for the next step
+### 4. Set environment variables
 
-### 4. Configure Environment Variables
+Create `web-app/.env.local` — the full list is in [Environment Variables](#environment-variables).
 
-#### For Next.js (web-app/.env.local)
+### 5. Run
+
+Two terminals, both inside `web-app/`:
 
 ```bash
-cd web-app
-cp .env.local.example .env.local
+npx convex dev     # terminal 1 — Convex backend + live schema sync
+npm run dev        # terminal 2 — Next.js dashboard on http://localhost:3000
 ```
 
-Edit `.env.local` with your actual values:
-
-```env
-CONVEX_DEPLOYMENT=your-deployment-name
-NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxxxx
-CLERK_SECRET_KEY=sk_test_xxxxx
-```
-
-#### For Python Backend (backend/.env)
-
-```bash
-cd ../backend
-cp .env.example .env
-```
-
-Edit `.env` with your Convex URL:
-
-```env
-CONVEX_URL_CLOUD =https://your-deployment.convex.cloud
-CONVEX_URL_SITE =https://your-deployment.convex.site
-
-POLL_INTERVAL=5
-```
-
-### 5. Install Python Dependencies
+### 6. Feed it data (no hardware needed)
 
 ```bash
 cd backend
 pip install -r requirements.txt
-```
-
-Python dependencies:
-
-- `requests==2.31.0` - HTTP client for Convex API
-- `numpy==1.26.4` - Numerical computing for Z-score calculations
-- `python-dotenv==1.0.1` - Environment variable management
-
-Or use a virtual environment (recommended):
-
-```bash
-python -m venv venv
-venv\Scripts\activate  # On Windows
-# source venv/bin/activate  # On Mac/Linux
-pip install -r requirements.txt
-```
-
-Note: The project also includes a `pyproject.toml` file for modern Python dependency management with additional packages like Flask (for future API endpoints).
-
-### 6. Run the System
-
-You'll need 2 terminal windows:
-
-#### Terminal 1: Convex Dev Server
-
-```bash
-cd web-app
-npx convex dev
-```
-
-#### Terminal 2: Next.js Dashboard
-
-```bash
-cd web-app
-npm run dev
-```
-
-### 7. Test the System (If no hardware build yet)
-
-Open a 3rd terminal and send test sensor data:
-This simulates the ESP32 sending sensor data to Convex at regular intervals.
-
-```bash
-cd backend
 python test_esp32.py
 ```
 
-Or manually with curl:
+Or post a single reading by hand:
 
 ```bash
-curl -X POST https://your-deployment.convex.site/sensor-data \
+curl -X POST https://<your-deployment>.convex.site/sensor-data \
   -H "Content-Type: application/json" \
-  -d '{"rain_value": 45.5, "soil_moisture": 67.2, "tilt_value": 12.3}'
+  -d '{"device_id":"ESP32-001","location":"Site A","rain_value":45.5,"soil_moisture":67.2,"tilt_value":12.3}'
 ```
 
-### 8. Configure ESP32 Firmware (Optional - for hardware deployment)
+### 7. Grant yourself admin
 
-Edit `firmware/slope_sentry.ino`:
-
-```cpp
-const char *WIFI_SSID = "your-wifi-name";           // Update with your WiFi SSID
-const char *WIFI_PASSWORD = "your-wifi-password";   // Update with your WiFi password
-const char *SERVER_URL = "https://your-deployment.convex.site/sensor-data"; // Use your Convex URL
-```
-
-Upload to ESP32 using Arduino IDE:
-
-1. Install ESP32 board support
-2. Install required libraries: `Adafruit MPU6050`, `ArduinoJson`
-3. Select board: "ESP32 DEVKIT V1"
-4. Connect ESP32 and upload
-
-### 9. Set Up User Roles (Clerk Dashboard)
-
-By default, all users have the `community` role. To grant admin access:
-
-1. Go to your [Clerk Dashboard](https://dashboard.clerk.com)
-2. Navigate to **Users** → select a user → **Metadata**
-3. In **Public Metadata**, add:
+1. Clerk Dashboard → **Users** → select your user → **Metadata** → **Public metadata**
+2. Add:
    ```json
    { "role": "admin" }
    ```
-4. Save — the user will now see the Admin Dashboard on next sign-in.
+3. Save and sign in again — the Admin sidebar appears.
 
-### 10. View the Dashboard
+> 💡 Run `python test_setup.py` from the project root to verify Python dependencies and Convex connectivity.
 
-1. Open http://localhost:3000
-2. Sign in with Clerk
-3. Navigate through the role-based pages:
+---
 
-   **Admin users see:**
-   - **Overview**: Main dashboard with real-time sensor data and full risk analysis
-   - **Live Monitoring**: Detailed sensor analytics with threshold visualization
-   - **Alerts & Logs**: System alerts and event logs (in development)
-   - **Reports Logs**: Review and manage community-submitted reports
-   - **Settings**: System configuration (in development)
+## Environment Variables
 
-   **Community users see:**
-   - **Overview**: Simplified risk dashboard
-   - **Live Monitoring**: Live sensor readings
-   - **Report Issue**: Submit ground observations (cracks, seepage, sounds, etc.)
+### `web-app/.env.local` — Next.js
+
+| Variable                            | Required | Description                                                              |
+| ----------------------------------- | :------: | ------------------------------------------------------------------------ |
+| `CONVEX_DEPLOYMENT`                 |    ✅    | Written automatically by `npx convex dev`                                |
+| `NEXT_PUBLIC_CONVEX_URL`            |    ✅    | `https://<deployment>.convex.cloud`                                      |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` |    ✅    | Clerk publishable key (`pk_test_…`)                                      |
+| `CLERK_SECRET_KEY`                  |    ✅    | Clerk secret key (`sk_test_…`)                                           |
+| `TELEGRAM_BOT_TOKEN`                |    ⚪    | From [@BotFather](https://t.me/BotFather); alerts are skipped when unset |
+| `TELEGRAM_CHAT_ID`                  |    ⚪    | Target chat, group, or channel ID for alerts                             |
+
+### Convex Dashboard → Settings → Environment Variables
+
+| Variable   |    Required     | Description                                                                                                                                                                                                                                                                   |
+| ---------- | :-------------: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SITE_URL` | ✅ _(deployed)_ | Public base URL of the Next.js app, e.g. `https://your-app.vercel.app` — **no trailing slash**. Convex uses it to reach `/api/calculate-risk` and `/api/send-telegram-alert`. Without it the pipeline silently falls back to the TypeScript scorer and skips Telegram alerts. |
+
+### `backend/.env` — optional local Python processor
+
+| Variable           | Description                         |
+| ------------------ | ----------------------------------- |
+| `CONVEX_URL_CLOUD` | `https://<deployment>.convex.cloud` |
+| `CONVEX_URL_SITE`  | `https://<deployment>.convex.site`  |
+| `POLL_INTERVAL`    | Seconds between polls (default `5`) |
+
+> ⚠️ No `.env.example` templates are committed — create the files above by hand. All `.env*` files are git-ignored; never commit real keys.
+
+---
+
+## Firmware Setup
+
+Edit the configuration block in [firmware/slope_sentry.ino](firmware/slope_sentry.ino):
+
+```cpp
+const char *WIFI_SSID     = "your-wifi-name";
+const char *WIFI_PASSWORD = "your-wifi-password";
+const char *SERVER_URL    = "https://<your-deployment>.convex.site/sensor-data";
+const char *DEVICE_ID     = "ESP32-001";   // "ESP32-002" for the second unit
+const char *LOCATION      = "Site A - Armani Cameron Residence";
+```
+
+Upload with the Arduino IDE:
+
+1. Install **ESP32 board support** via Boards Manager.
+2. Install the libraries **Adafruit MPU6050**, **Adafruit Unified Sensor**, and **ArduinoJson**.
+3. Select board **ESP32 DEVKIT V1**, pick the serial port, and upload.
+4. Open the Serial Monitor at **115200 baud** to confirm WiFi and MPU6050 initialisation.
+
+The firmware also drives on-device LED and buzzer alerts, so a node keeps warning locally even if connectivity drops.
+
+---
+
+## Deployment
+
+The web app deploys to **Vercel**, which serves both the Next.js dashboard and the Python risk function — [web-app/vercel.json](web-app/vercel.json) wires up `@vercel/next` and `@vercel/python`.
+
+1. Import the repository into Vercel with **root directory = `web-app`**.
+2. Add every `web-app/.env.local` variable as a Vercel environment variable.
+3. Deploy Convex to production: `npx convex deploy`.
+4. In the **Convex dashboard**, set `SITE_URL` to your Vercel URL.
+5. Point each ESP32's `SERVER_URL` at the production `.convex.site` endpoint.
+
+Both `/api/calculate-risk` and `/api/send-telegram-alert` are declared **public routes** in [web-app/middleware.ts](web-app/middleware.ts) so Convex can call them without a Clerk session.
+
+---
+
+## API Reference
+
+### Convex HTTP endpoints
+
+| Method | Path           | Body                                                               | Response                                        |
+| ------ | -------------- | ------------------------------------------------------------------ | ----------------------------------------------- |
+| `POST` | `/sensor-data` | `{ device_id?, location?, rain_value, soil_moisture, tilt_value }` | `{ status, id, message, riskState, riskScore }` |
+| `GET`  | `/health`      | —                                                                  | `{ status: "ok", service }`                     |
+
+### Next.js API routes
+
+| Method | Path                       | Purpose                                            |
+| ------ | -------------------------- | -------------------------------------------------- |
+| `POST` | `/api/calculate-risk`      | Python (NumPy) hybrid scorer — primary risk engine |
+| `POST` | `/api/send-telegram-alert` | Formats and sends the High-risk Telegram alert     |
+
+### Convex queries
+
+| Function                                                                               | Purpose                                                  |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `sensorData.getLatestResult`                                                           | Latest risk result, optionally per `deviceId`            |
+| `sensorData.getLatestResults`                                                          | Recent risk history with `limit` and optional `deviceId` |
+| `sensorData.getLatestResultPerDevice`                                                  | Latest result for every node — powers the map            |
+| `sensorData.getUnprocessedData`                                                        | Readings awaiting processing (local Python loop)         |
+| `sensorData.getAllSensorData`                                                          | Raw sensor readings, for debugging                       |
+| `anomalyResults.getLatest` / `getLatestByDevice` / `getAll`                            | Risk analysis history                                    |
+| `reports.getAllReports` / `getReportsByStatus` / `getRecentReports` / `getReportStats` | Community reports and statistics                         |
+
+### Convex mutations
+
+| Function                      | Purpose                        |
+| ----------------------------- | ------------------------------ |
+| `sensorData.addSensorData`    | Store a raw sensor reading     |
+| `sensorData.addAnomalyResult` | Persist a scored risk result   |
+| `sensorData.markAsProcessed`  | Flag a reading as handled      |
+| `reports.submitReport`        | Submit a community observation |
+| `reports.updateReportStatus`  | Admin status update and notes  |
+
+### Data model
+
+| Table            | Key fields                                                                                                   | Indexes                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| `sensorData`     | `timestamp`, `deviceId`, `location`, `rainValue`, `soilMoisture`, `tiltValue`, `processed`                   | `by_timestamp`, `by_processed`, `by_device`  |
+| `anomalyResults` | sensor values, `riskScore`, `riskState`, per-sensor Z-scores, `thresholdStatus`, `thresholds`, `rollingMean` | `by_timestamp`, `by_risk_state`, `by_device` |
+| `reports`        | `userName`, `userEmail`, `reportType`, `description`, `severity`, `status`, `adminNotes`                     | `by_timestamp`, `by_status`, `by_severity`   |
+
+---
 
 ## Project Structure
 
 ```
-landslide-iot-system/
-├── backend/
-│   ├── app.py                 # Python processing server (main loop)
-│   ├── anomaly_detector.py    # Hybrid Z-score + threshold detection logic
-│   ├── convex_client.py       # Convex API wrapper
-│   ├── requirements.txt       # Python dependencies
-│   ├── test_esp32.py          # Simulate ESP32 data
-│   └── .env
-├── web-app/
-│   ├── app/
-│   │   ├── layout.tsx              # Root layout with Clerk/Convex providers
-│   │   ├── page.tsx                # Main dashboard (role-aware Overview)
-│   │   ├── globals.css             # Global styles
-│   │   ├── live-monitoring/
-│   │   │   └── page.tsx            # Live monitoring page (all roles)
-│   │   ├── alerts-logs/
-│   │   │   └── page.tsx            # Alerts & logs page (admin only)
-│   │   ├── report/
-│   │   │   └── page.tsx            # Community issue reporting page
-│   │   ├── reports-logs/
-│   │   │   └── page.tsx            # Admin view for all community reports
-│   │   └── settings/
-│   │       └── page.tsx            # Settings page (in development)
-│   ├── components/
-│   │   ├── AppLayout.tsx           # Shared layout with sidebar & header
-│   │   ├── Dashboard.tsx           # Real-time dashboard with charts
-│   │   ├── RoleGuard.tsx           # Client-side role-based route protection
-│   │   ├── Providers.tsx           # Clerk + Convex setup
-│   │   ├── Sidebar.tsx             # Base navigation sidebar
-│   │   ├── admin/
-│   │   │   └── AdminSidebar.tsx    # Admin navigation (all 5 pages)
-│   │   ├── community/
-│   │   │   └── CommunitySidebar.tsx # Community navigation (3 pages)
-│   │   └── ui/
-│   │       └── card.tsx            # Reusable card component
-│   ├── convex/
-│   │   ├── schema.ts               # Database schema (sensorData, anomalyResults, reports)
-│   │   ├── sensorData.ts           # CRUD operations for sensor data
-│   │   ├── anomalyResults.ts       # CRUD operations for risk analysis
-│   │   ├── reports.ts              # Community report mutations & queries
-│   │   └── http.ts                 # ESP32 HTTP endpoint
-│   ├── lib/
-│   │   ├── utils.ts                # Utility functions (cn helper)
-│   │   └── clerk-roles.ts          # Server-side role helpers
-│   ├── middleware.ts               # Clerk auth middleware
-│   ├── package.json                # Node.js dependencies
-│   └── .env.local
+Landslide IoT System/
 ├── firmware/
-│   └── slope_sentry.ino            # ESP32 code with sensor integration
-├── pyproject.toml                  # Python project configuration
-└── README.md
+│   └── slope_sentry.ino            # ESP32: sensors, WiFi, local LED/buzzer alerts
+│
+├── web-app/                        # Next.js dashboard + Convex backend + Python API
+│   ├── api/                        # Vercel Python serverless functions
+│   │   ├── calculate-risk.py       #   → primary hybrid risk endpoint
+│   │   └── anomaly_detector.py     #   → Z-score + threshold engine (NumPy)
+│   ├── app/
+│   │   ├── page.tsx                # Overview (role-aware) + sign-in screen
+│   │   ├── live-monitoring/        # Per-sensor charts with threshold lines
+│   │   ├── alerts-logs/            # Admin: alert history, search, export
+│   │   ├── reports-logs/           # Admin: community report triage
+│   │   ├── settings/               # Admin: algorithm, thresholds, devices, theme
+│   │   ├── report/                 # Community: submit an observation
+│   │   └── api/send-telegram-alert/route.ts
+│   ├── components/
+│   │   ├── Dashboard.tsx           # Live risk cards, charts, map
+│   │   ├── SensorMap.tsx           # Leaflet map with risk-coloured markers
+│   │   ├── AppLayout.tsx           # Sidebar + header shell
+│   │   ├── RoleGuard.tsx           # Client-side role protection
+│   │   ├── admin/AdminSidebar.tsx  # 5-page admin navigation
+│   │   └── community/CommunitySidebar.tsx
+│   ├── convex/
+│   │   ├── schema.ts               # sensorData · anomalyResults · reports
+│   │   ├── http.ts                 # /sensor-data ingest → risk → alert pipeline
+│   │   ├── anomalyDetection.ts     # TypeScript fallback risk engine
+│   │   └── sensorData.ts · anomalyResults.ts · reports.ts
+│   ├── lib/clerk-roles.ts          # Server-side role helpers
+│   ├── middleware.ts               # Clerk auth + public API routes
+│   └── vercel.json                 # Next.js + Python build config
+│
+├── backend/                        # Optional local processing loop
+│   ├── app.py                      # Poll → score → write back
+│   ├── anomaly_detector.py         # Same hybrid algorithm
+│   ├── convex_client.py            # Convex REST wrapper
+│   └── test_esp32.py               # ESP32 data simulator
+│
+├── test_setup.py                   # Environment verification script
+└── pyproject.toml                  # Python project config (uv)
 ```
 
-## Key Technologies
+---
 
-### Frontend
+## Tech Stack
 
-- **Next.js 16.1.4** - React framework with App Router
-- **React 19.2.3** - UI library
-- **Clerk 6.36.10** - Authentication and user management
-- **Convex 1.31.6** - Real-time database client
-- **Recharts 3.7.0** - Data visualization charts
-- **Tailwind CSS 4.1.18** - Utility-first CSS framework
-- **Lucide React** - Modern icon library
-- **TypeScript 5.9.3** - Type-safe JavaScript
+**Frontend** — Next.js 16 (App Router) · React 19 · TypeScript 5.9 · Tailwind CSS 4 · Recharts 3.7 · Leaflet / react-leaflet · Lucide React
 
-### Backend
+**Backend** — Convex 1.31 (real-time DB, HTTP actions, WebSocket subscriptions) · Python 3.11 + NumPy on Vercel serverless · Clerk 6.36 for auth and RBAC
 
-- **Python 3.11+** - Core processing engine
-- **NumPy 1.26.4** - Statistical calculations
-- **Requests 2.31.0** - HTTP client for Convex API
-- **python-dotenv 1.0.1** - Environment configuration
+**Hardware** — ESP32 on the Arduino framework · Adafruit MPU6050 · ArduinoJson · HTTPClient
 
-### Hardware
+**Integrations** — Telegram Bot API · Vercel
 
-- **ESP32** - WiFi-enabled microcontroller
-- **Arduino Framework** - Firmware development
-- **ArduinoJson** - JSON serialization
-- **Adafruit MPU6050** - Accelerometer library
-- **HTTPClient** - ESP32 HTTP communication
+---
 
-## How It Works
+## License
 
-1. **ESP32** collects sensor data (rain, soil moisture, tilt) from multiple sensors
-2. **ESP32** sends data via HTTP POST to Convex endpoint with WiFi connectivity
-3. **Convex** stores raw sensor data in `sensorData` table
-4. **Python backend** polls Convex every 5 seconds for unprocessed data
-5. **Python** applies hybrid risk assessment using dual methods:
+Released under the [MIT License](LICENSE) — © 2026 Umair Arif.
 
-   **Method A - Statistical Z-Score:**
-   - Maintains rolling window of last 20 readings for each sensor
-   - Calculates mean and standard deviation
-   - Computes Z-score: `Z = (Current - Mean) / StdDev`
-   - Maps to statistical risk percentage (Z=3 sigma = 100% risk)
+<div align="center">
 
-   **Method B - Fixed Thresholds:**
-   - Compares each sensor value against warning/danger thresholds
-   - Tilt: 15°/25°, Soil: 70%/85%, Rain: 50/75
-   - Determines threshold-based risk level
+**Protecting lives through intelligent disaster prediction**
 
-   **Hybrid Combination:**
-   - Takes the WORSE result from both methods (conservative fail-safe)
-   - Classifies final risk as Low (<30%), Moderate (30-60%), or High (>60%)
-
-6. **Python** saves comprehensive results to `anomalyResults` table in Convex:
-   - Risk scores, Z-scores, threshold status, rolling averages
-7. **Next.js dashboard** subscribes to real-time updates from Convex
-8. **Role-based routing**: Clerk role (`admin` / `community`) determines the sidebar and accessible pages
-9. **Admin dashboard** displays:
-   - Combined risk level with color-coded status
-   - Live sensor values (rain, soil moisture, tilt) with Z-scores
-   - Interactive charts showing historical trends with threshold lines
-   - Recent history of sensor readings
-   - Access to Reports Logs for managing community submissions
-10. **Community dashboard** displays:
-    - Simplified risk overview
-    - Live sensor readings
-    - Report Issue form for submitting ground observations
-
-## API Endpoints
-
-### Convex HTTP Endpoints
-
-- `POST /sensor-data` - Receive sensor data from ESP32
-  - Accepts: `{ rain_value, soil_moisture, tilt_value }`
-  - Returns: `{ status, id, message, riskState }`
-- `GET /health` - Health check
-
-### Convex Queries (for React hooks)
-
-- `api.anomalyResults.getLatest` - Get most recent risk analysis
-- `api.anomalyResults.getLatestResults` - Get recent history
-- `api.sensorData.getUnprocessedData` - Get data needing processing
-- `api.sensorData.getAll` - Get all sensor readings
-- `api.sensorData.getLatest` - Get latest sensor reading
-- `api.reports.getAllReports` - Get all community reports (admin)
-- `api.reports.getReportsByStatus` - Filter reports by status
-- `api.reports.getRecentReports` - Get recent reports with limit
-- `api.reports.getReportStats` - Get report count statistics
-
-### Convex Mutations
-
-- `api.sensorData.addSensorData` - Add new sensor reading
-- `api.sensorData.markAsProcessed` - Mark data as processed
-- `api.anomalyResults.addAnomalyResult` - Add risk analysis result
-- `api.reports.submitReport` - Submit a new community report
-- `api.reports.updateReportStatus` - Update report status (admin)
-
-## Features
-
-### Real-Time Monitoring
-
-- Live sensor data updates every 5 seconds
-- Instant risk level changes with color-coded status indicators
-- WebSocket-based real-time updates via Convex
-- Multi-page navigation with Overview, Live Monitoring, Alerts & Logs, Reports Logs, and Settings
-- Mobile-responsive sidebar with hamburger menu
-
-### Intelligent Risk Analysis
-
-- **Hybrid Detection System**: Combines statistical and threshold-based approaches for maximum safety
-  - **Z-Score Analysis**: Statistical anomaly detection using rolling window (20 readings)
-  - **Fixed Thresholds**: Engineering/geological safety limits for each sensor
-- **Conservative Fail-Safe**: Takes the WORSE result from both methods
-- Multi-sensor data fusion (rain, soil moisture, tilt)
-- Three-tier risk classification: Low, Moderate, High
-- Individual sensor Z-scores and threshold status tracking
-- **Threshold Values**:
-  - **Tilt**: Warning 15°, Danger 25° (geological instability limits)
-  - **Soil Moisture**: Warning 70%, Danger 85% (saturation/liquefaction)
-  - **Rain**: Warning 50, Danger 75 (intensity thresholds)
-
-### Role-Based Access Control (RBAC)
-
-- **Two roles**: `admin` and `community` (default)
-- Role stored in Clerk `publicMetadata.role`
-- `RoleGuard` component restricts access to admin-only pages client-side
-- `clerk-roles.ts` provides server-side role checking utilities
-- **Admin Dashboard** — full access to all pages and data
-- **Community Dashboard** — simplified monitoring + report submission
-
-### Community Reporting
-
-- Community members can submit ground-level observations via the **Report Issue** page
-- **Report types**: Ground Crack, Water Seepage, Strange Sound, Unusual Movement, Falling Rocks, Other
-- **Severity levels**: Low, Medium, High
-- Optional location field for geolocation context
-- Reports are stored in the `reports` Convex table with `Pending` status on creation
-- **Admin Reports Logs** page allows admins to:
-  - View all reports with severity and status badges
-  - Filter reports by status (All / Pending / Reviewed / Resolved)
-  - Update report status with optional admin notes
-  - Track report statistics (totals, pending count, resolved count)
-
-### Security & Authentication
-
-- Clerk-based user authentication with UserButton component
-- **Role-Based Access Control**: Admin and Community roles via Clerk public metadata
-- `RoleGuard` client-side component for page-level protection
-- Protected routes with Next.js middleware
-- Secure environment variable management
-- HTTPS communication
-- Session management across all pages
-
-## Hybrid Risk Assessment Algorithm
-
-The system uses a **dual-method approach** for maximum safety, combining statistical and threshold-based detection:
-
-### Method 1: Statistical Z-Score Analysis
-
-1. **Rolling Window**: Maintains last 20 readings for each sensor
-2. **Z-Score Calculation**: `Z = (Current - Mean) / StdDev`
-3. **Statistical Risk**:
-   - Averages absolute Z-scores from all sensors
-   - Maps Z-score (0-3) to risk percentage (0-100%)
-   - Z ≥ 3 (3 standard deviations) = 100% risk
-4. **Advantage**: Detects rapid changes and unusual patterns
-5. **Use Case**: Catches sudden acceleration even if values are still "safe"
-
-### Method 2: Fixed Threshold Checking
-
-1. **Predefined Limits**: Based on engineering/geological safety standards
-   - **Tilt**: Warning 15°, Danger 25°
-   - **Soil Moisture**: Warning 70%, Danger 85%
-   - **Rain**: Warning 50, Danger 75
-2. **Threshold Risk**:
-   - Danger (any sensor) = 100% risk
-   - Warning (2+ sensors) = 80% risk
-   - Warning (1 sensor) = 50% risk
-3. **Advantage**: Respects absolute physical limits
-4. **Use Case**: Prevents exceeding structural failure points
-
-**Why Both Methods?**
-
-- **Z-Score catches**: Sudden changes, early warnings, rate of change
-- **Thresholds catch**: Slow creep, absolute danger levels, engineering limits
-- **Combined**: Maximum safety for life-critical landslide detection
-
-### Risk Classification
-
-- **Low**: 0-30% risk (Green) - Both methods agree it's safe
-- **Moderate**: 30-60% risk (Yellow) - One method detects concern
-- **High**: 60-100% risk (Red) - Either method detects danger
-
-### Example Scenarios
-
-1. **Rapid Acceleration**: Tilt 2° → 8° (Z=4.5, but <15°)
-   - Z-Score: HIGH | Threshold: NORMAL → **Final: HIGH**
-2. **Slow Creep**: Tilt gradually increases to 26°
-   - Z-Score: NORMAL | Threshold: HIGH → **Final: HIGH**
-3. **Normal Operation**: Stable readings within limits
-   - Z-Score: NORMAL | Threshold: NORMAL → **Final: NORMAL**
-
-## Future Improvements
-
-- [ ] Build Alerts & Logs page with event history and filtering
-- [ ] Develop Settings page for system configuration
-- [ ] SMS/Email alert notifications
-- [ ] Weather API integration for correlation
+</div>
