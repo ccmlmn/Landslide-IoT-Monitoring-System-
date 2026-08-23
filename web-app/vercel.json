@@ -6,8 +6,11 @@
       "use": "@vercel/next"
     },
     {
-      "src": "api/**/*.py",
-      "use": "@vercel/python"
+      "src": "api/calculate-risk.py",
+      "use": "@vercel/python",
+      "config": {
+        "includeFiles": "api/*.py"
+      }
     }
   ],
   "routes": [

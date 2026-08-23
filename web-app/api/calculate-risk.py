@@ -1,10 +1,18 @@
 from http.server import BaseHTTPRequestHandler
 import json
 import os
-try:
-    from .anomaly_detector import AnomalyDetector
-except ImportError:
-    from anomaly_detector import AnomalyDetector
+import sys
+
+# anomaly_detector.py sits next to this file and is shipped via the "includeFiles"
+# entry in vercel.json. It is a plain module, not a second endpoint — only this
+# file defines a `handler`, which is why vercel.json names this file explicitly
+# instead of globbing api/**/*.py.
+# Put this file's own directory on sys.path so the import resolves the same way
+# locally, on Vercel, and under the test harness, rather than depending on
+# whatever the runtime happens to set as the working directory.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from anomaly_detector import AnomalyDetector
 
 class handler(BaseHTTPRequestHandler):
     """Vercel serverless function to calculate risk score"""
